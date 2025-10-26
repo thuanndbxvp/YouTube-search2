@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Video } from '../types';
-import { ClipboardCopyIcon, DownloadIcon } from './Icons';
+import { ClipboardCopyIcon } from './Icons';
 
 interface HashtagModalProps {
   isOpen: boolean;
@@ -38,19 +38,6 @@ export const HashtagModal: React.FC<HashtagModalProps> = ({ isOpen, onClose, vid
         setTimeout(() => setCopyStatus('idle'), 2000);
     });
   };
-  
-  const handleDownload = () => {
-    const allHashtags = hashtagCounts.map(([tag]) => tag).join('\n');
-    const blob = new Blob([allHashtags], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'hashtags.txt';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
 
   if (!isOpen) return null;
 
@@ -75,16 +62,12 @@ export const HashtagModal: React.FC<HashtagModalProps> = ({ isOpen, onClose, vid
           )}
         </div>
 
-        <div className="mt-6 flex justify-between items-center space-x-2">
-          <button onClick={handleCopy} className="flex-1 py-2 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold transition-colors flex items-center justify-center">
+        <div className="mt-6 flex justify-end items-center space-x-2">
+          <button onClick={handleCopy} className="py-2 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold transition-colors flex items-center justify-center">
             <ClipboardCopyIcon className="w-5 h-5 mr-2"/>
             {copyStatus === 'copied' ? 'Đã sao chép!' : 'Sao chép tất cả'}
           </button>
-          <button onClick={handleDownload} className="flex-1 py-2 px-4 rounded-lg bg-gray-600 hover:bg-gray-700 text-white font-semibold transition-colors flex items-center justify-center">
-             <DownloadIcon className="w-5 h-5 mr-2"/>
-             Tải về (.txt)
-          </button>
-           <button onClick={onClose} className="py-2 px-6 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors">Đóng</button>
+           <button onClick={onClose} className="py-2 px-6 rounded-lg bg-gray-600 hover:bg-gray-700 text-white font-semibold transition-colors">Đóng</button>
         </div>
       </div>
     </div>

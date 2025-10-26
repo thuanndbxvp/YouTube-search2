@@ -66,29 +66,43 @@ export const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({ videos, channe
     return new Map([...filteredCounts.entries()].sort((a, b) => b[1] - a[1]));
   }, [videos]);
 
+  const hashtagCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    const hashtagRegex = /#([\w\u00C0-\u1EF9]+)/g; // Regex for hashtags including Vietnamese characters
+
+    videos.forEach(video => {
+      const description = video.snippet.description || '';
+      const matches = description.match(hashtagRegex);
+      if (matches) {
+        matches.forEach(hashtag => {
+          const cleanedHashtag = hashtag.toLowerCase();
+          counts.set(cleanedHashtag, (counts.get(cleanedHashtag) || 0) + 1);
+        });
+      }
+    });
+
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1]);
+  }, [videos]);
+
 
   const topKeywords = Array.from(keywordCounts.entries()).slice(0, 20);
 
-  const handleDownloadKeywords = () => {
+  const handleDownloadChannelData = () => {
     if (!channelInfo) return;
-    const data = Array.from(keywordCounts.entries()).map(([key, count], index) => ({
-      'STT': index + 1,
-      'Key': key,
-      'Số lượt hiển thị': count,
-    }));
-    
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    worksheet['!cols'] = [{ wch: 5 }, { wch: 35 }, { wch: 20 }];
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Keywords');
     const safeChannelName = channelInfo.title.replace(/[^\w\s]/gi, '').replace(/\s+/g, '_');
-    XLSX.writeFile(workbook, `Tukhoa-${safeChannelName}.xlsx`);
-  };
 
-  const handleDownloadVideos = () => {
-    if (!channelInfo) return;
-    
-    const data = videos.map(video => ({
+    // 1. Keywords Sheet
+    const keywordData = Array.from(keywordCounts.entries()).map(([key, count], index) => ({
+      'STT': index + 1,
+      'Từ khóa / Cụm từ': key,
+      'Số lần xuất hiện': count,
+    }));
+    const keywordsWorksheet = XLSX.utils.json_to_sheet(keywordData);
+    keywordsWorksheet['!cols'] = [{ wch: 5 }, { wch: 35 }, { wch: 20 }];
+
+    // 2. Videos Sheet
+    const videoData = videos.map(video => ({
         'Tiêu đề': video.snippet.title,
         'Mô tả': video.snippet.description,
         'Ngày đăng': formatDate(video.snippet.publishedAt),
@@ -97,21 +111,27 @@ export const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({ videos, channe
         'Thời lượng': parseISO8601Duration(video.contentDetails.duration),
         'URL': `https://www.youtube.com/watch?v=${video.id}`
     }));
-
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    worksheet['!cols'] = [
-        { wch: 70 }, // Title
-        { wch: 100 }, // Description
-        { wch: 15 }, // Date
-        { wch: 15 }, // Views
-        { wch: 15 }, // Likes
-        { wch: 12 }, // Duration
-        { wch: 45 }  // URL
+    const videosWorksheet = XLSX.utils.json_to_sheet(videoData);
+    videosWorksheet['!cols'] = [
+        { wch: 70 }, { wch: 100 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 45 }
     ];
+    
+    // 3. Hashtags Sheet
+    const hashtagData = hashtagCounts.map(([tag, count], index) => ({
+        'STT': index + 1,
+        'Hashtag': tag,
+        'Số lần sử dụng': count
+    }));
+    const hashtagsWorksheet = XLSX.utils.json_to_sheet(hashtagData);
+    hashtagsWorksheet['!cols'] = [{ wch: 5 }, { wch: 30 }, { wch: 20 }];
+
+    // Create workbook and append sheets
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Videos');
-    const safeChannelName = channelInfo.title.replace(/[^\w\s]/gi, '').replace(/\s+/g, '_');
-    XLSX.writeFile(workbook, `Videos-${safeChannelName}.xlsx`);
+    XLSX.utils.book_append_sheet(workbook, keywordsWorksheet, 'Từ khóa');
+    XLSX.utils.book_append_sheet(workbook, videosWorksheet, 'Dữ liệu Video');
+    XLSX.utils.book_append_sheet(workbook, hashtagsWorksheet, 'Hashtags');
+    
+    XLSX.writeFile(workbook, `Phantich_Kenh_${safeChannelName}.xlsx`);
   };
 
   return (
@@ -131,13 +151,9 @@ export const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({ videos, channe
         ))}
       </div>
       <div className="flex items-center space-x-3">
-        <button onClick={handleDownloadKeywords} disabled={!channelInfo} className="flex items-center justify-center bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 text-sm disabled:opacity-50">
+        <button onClick={handleDownloadChannelData} disabled={!channelInfo} className="flex items-center justify-center bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 text-sm disabled:opacity-50">
             <DownloadIcon className="w-4 h-4 mr-2" />
-            Tải về Từ khóa (.xlsx)
-        </button>
-        <button onClick={handleDownloadVideos} disabled={!channelInfo} className="flex items-center justify-center bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 text-sm disabled:opacity-50">
-            <DownloadIcon className="w-4 h-4 mr-2" />
-            Tải về Dữ liệu Video (.xlsx)
+            Tải về Dữ liệu Kênh (.xlsx)
         </button>
       </div>
     </div>
