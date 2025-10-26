@@ -186,7 +186,6 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
                     </div>
                     <div>
                         <AnalysisTools 
-                          videos={videos} 
                           channelInfo={channelInfo} 
                           appConfig={appConfig} 
                           brainstormMessages={brainstormMessages}
