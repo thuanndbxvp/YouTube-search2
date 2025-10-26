@@ -10,13 +10,13 @@ import { KeywordAnalysis } from './components/KeywordAnalysis';
 import { AnalysisTools } from './components/AnalysisTools';
 
 const initialConfig: StoredConfig = {
-  youtube: { keys: [], activeKeyId: null },
-  gemini: { keys: [], activeKeyId: null, model: 'gemini-2.5-flash' },
-  openai: { keys: [], activeKeyId: null, model: 'gpt-3.5-turbo' },
+  youtube: { key: '' },
+  gemini: { key: '', model: 'gemini-2.5-pro' },
+  openai: { key: '', model: 'gpt-4o' },
 };
 
 export default function App() {
-  const [appConfig, setAppConfig] = useLocalStorage<StoredConfig>('yt-analyzer-config', initialConfig);
+  const [appConfig, setAppConfig] = useLocalStorage<StoredConfig>('yt-analyzer-config-v2', initialConfig);
   const [isApiModalOpen, setIsApiModalOpen] = useState(false);
   const [videos, setVideos] = useState<Video[]>([]);
   const [channelInfo, setChannelInfo] = useState<ChannelInfo | null>(null);
@@ -25,16 +25,10 @@ export default function App() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const getActiveApiKey = (service: 'youtube' | 'gemini' | 'openai') => {
-    const config = appConfig[service];
-    if (!config.activeKeyId) return null;
-    return config.keys.find(k => k.id === config.activeKeyId)?.key || null;
-  };
-
   const handleFetchVideos = useCallback(async (channelUrl: string) => {
-    const youtubeApiKey = getActiveApiKey('youtube');
+    const youtubeApiKey = appConfig.youtube.key;
     if (!youtubeApiKey) {
-      setError('Vui lòng thêm và chọn một YouTube API Key đang hoạt động.');
+      setError('Vui lòng thêm YouTube API Key của bạn trong cài đặt API.');
       setIsApiModalOpen(true);
       return;
     }
@@ -60,7 +54,7 @@ export default function App() {
   }, [appConfig]);
 
   const handleLoadMore = useCallback(async () => {
-    const youtubeApiKey = getActiveApiKey('youtube');
+    const youtubeApiKey = appConfig.youtube.key;
     if (!nextPageToken || !channelInfo || !youtubeApiKey) return;
 
     setIsLoadingMore(true);
@@ -96,7 +90,7 @@ export default function App() {
             <div className="mt-8 p-6 bg-[#24283b] rounded-lg">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-6">
                     <div className="lg:col-span-2">
-                        <KeywordAnalysis videos={videos} />
+                        <KeywordAnalysis videos={videos} channelInfo={channelInfo} />
                     </div>
                     <div>
                         <AnalysisTools />

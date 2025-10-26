@@ -1,22 +1,16 @@
-export interface ApiKeyEntry {
-  id: string;
-  key: string;
-  label: string;
-}
-
-export interface ServiceConfig {
-  keys: ApiKeyEntry[];
-  activeKeyId: string | null;
-}
-
-export interface AiServiceConfig extends ServiceConfig {
-  model: string;
-}
 
 export interface StoredConfig {
-  youtube: ServiceConfig;
-  gemini: AiServiceConfig;
-  openai: AiServiceConfig;
+  youtube: {
+    key: string;
+  };
+  gemini: {
+    key: string;
+    model: string;
+  };
+  openai: {
+    key: string;
+    model: string;
+  };
 }
 
 

@@ -1,21 +1,39 @@
 import React, { useMemo } from 'react';
-import { Video } from '../types';
+import { Video, ChannelInfo } from '../types';
 import { DownloadIcon } from './Icons';
+import { formatDate, parseISO8601Duration } from '../utils/formatters';
+
+// Make XLSX globally available from the script tag in index.html
+declare const XLSX: any;
 
 interface KeywordAnalysisProps {
   videos: Video[];
+  channelInfo: ChannelInfo | null;
 }
 
-// Simple English stop words. A more comprehensive list would be better for production.
-const stopWords = new Set(['a','an','the','and','or','but','for','in','on','at','to','of','i','you','he','she','it','we','they','is','are','was','were','be','been','being','have','has','had','do','does','did','will','would','should','can','could','not','no','this','that','these','those','my','your','his','her','its','our','their', 'with', 'from', 'by', 'as', 'into', 'through', 'during', 'before', 'after', 'above', 'below']);
+const vietnameseStopWords = new Set([
+    'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín', 'mười', 'bị', 'bởi', 'cả',
+    'cần', 'càng', 'chắc', 'chắn', 'chỉ', 'chiếc', 'cho', 'chứ', 'chưa', 'có', 'có thể',
+    'cứ', 'của', 'cùng', 'cũng', 'đã', 'đang', 'đây', 'để', 'đến', 'đều', 'điều', 'do',
+    'đó', 'được', 'gì', 'hơn', 'hết', 'khi', 'không', 'là', 'làm', 'lại', 'lên', 'lúc',
+    'mà', 'mỗi', 'một cách', 'này', 'nên', 'nếu', 'ngay', 'nhiều', 'như', 'nhưng',
+    'những', 'nơi', 'nữa', 'phải', 'qua', 'ra', 'rằng', 'rất', 'rồi', 'sau', 'sẽ',
+    'so', 'sự', 'tại', 'theo', 'thì', 'trên', 'trước', 'từ', 'từng', 'và', 'vào', 'vẫn',
+    'về', 'vì', 'với', 'vừa', 'thứ', 'anh', 'em', 'chị', 'bạn', 'tôi',
+    // English common words
+    'a','an','the','and','or','but','for','in','on','at','to','of','i','you','he','she','it','we','they','is','are','was','were','be','been','being','have','has','had','do','does','did','will','would','should','can','could','not','no','this','that','these','those','my','your','his','her','its','our','their', 'with', 'from', 'by', 'as', 'into', 'through', 'during', 'before', 'after', 'above', 'below',
+    // Common YouTube title filler
+    'new', 'hot', 'top', 'best', 'official', 'video', 'music', 'live', 'full', 'hd', 'mv', 'ep', 'part', 'series'
+]);
 
-export const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({ videos }) => {
+export const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({ videos, channelInfo }) => {
   const keywordCounts = useMemo(() => {
     const counts = new Map<string, number>();
     videos.forEach(video => {
-      const titleWords = video.snippet.title.toLowerCase().match(/\b(\w+)\b/g) || [];
+      // Improved word matching for Vietnamese and removal of punctuation
+      const titleWords = video.snippet.title.toLowerCase().split(/[\s,.\-()|[\]]+/).filter(Boolean);
       titleWords.forEach(word => {
-        if (!stopWords.has(word) && isNaN(parseInt(word))) { // Exclude stop words and numbers
+        if (word.length > 2 && !vietnameseStopWords.has(word) && isNaN(parseInt(word))) { 
           counts.set(word, (counts.get(word) || 0) + 1);
         }
       });
@@ -25,65 +43,73 @@ export const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({ videos }) => {
 
   const topKeywords = Array.from(keywordCounts.entries()).slice(0, 20);
 
-  const downloadCSV = (data: string, filename: string) => {
-    const blob = new Blob([data], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   const handleDownloadKeywords = () => {
-    let csvContent = 'Keyword,Count\r\n';
-    keywordCounts.forEach((count, keyword) => {
-      csvContent += `${keyword},${count}\r\n`;
-    });
-    downloadCSV(csvContent, 'youtube_keywords.csv');
+    if (!channelInfo) return;
+    const data = Array.from(keywordCounts.entries()).map(([key, count], index) => ({
+      'STT': index + 1,
+      'Key': key,
+      'Số lượt hiển thị': count,
+    }));
+    
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    worksheet['!cols'] = [{ wch: 5 }, { wch: 25 }, { wch: 20 }];
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Keywords');
+    const safeChannelName = channelInfo.title.replace(/[^\w\s]/gi, '').replace(/\s+/g, '_');
+    XLSX.writeFile(workbook, `Tukhoa-${safeChannelName}.xlsx`);
   };
 
   const handleDownloadVideos = () => {
-    let csvContent = 'Title,Publication Date,Views,Likes,Duration (ISO8601),URL\r\n';
-    videos.forEach(video => {
-      const row = [
-        `"${video.snippet.title.replace(/"/g, '""')}"`,
-        video.snippet.publishedAt,
-        video.statistics.viewCount,
-        video.statistics.likeCount,
-        video.contentDetails.duration,
-        `https://www.youtube.com/watch?v=${video.id}`
-      ].join(',');
-      csvContent += row + '\r\n';
-    });
-    downloadCSV(csvContent, 'youtube_videos.csv');
+    if (!channelInfo) return;
+    
+    const data = videos.map(video => ({
+        'Tiêu đề': video.snippet.title,
+        'Ngày đăng': formatDate(video.snippet.publishedAt),
+        'Lượt xem': parseInt(video.statistics.viewCount, 10),
+        'Lượt thích': parseInt(video.statistics.likeCount, 10),
+        'Thời lượng': parseISO8601Duration(video.contentDetails.duration),
+        'URL': `https://www.youtube.com/watch?v=${video.id}`
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    worksheet['!cols'] = [
+        { wch: 70 }, // Title
+        { wch: 15 }, // Date
+        { wch: 15 }, // Views
+        { wch: 15 }, // Likes
+        { wch: 12 }, // Duration
+        { wch: 45 }  // URL
+    ];
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Videos');
+    const safeChannelName = channelInfo.title.replace(/[^\w\s]/gi, '').replace(/\s+/g, '_');
+    XLSX.writeFile(workbook, `Videos-${safeChannelName}.xlsx`);
   };
 
   return (
     <div>
         <h2 className="text-xl font-bold text-indigo-300 mb-4 flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
             </svg>
             Từ khóa nổi bật nhất trong Tiêu đề
         </h2>
       <div className="flex flex-wrap gap-2 mb-4">
         {topKeywords.map(([keyword, count]) => (
           <span key={keyword} className="bg-gray-700 text-gray-200 text-sm font-medium px-3 py-1 rounded-full">
-            {count}x {keyword}
+            {keyword} <span className="text-xs opacity-75 ml-1">({count})</span>
           </span>
         ))}
       </div>
       <div className="flex items-center space-x-3">
-        <button onClick={handleDownloadKeywords} className="flex items-center justify-center bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 text-sm">
+        <button onClick={handleDownloadKeywords} disabled={!channelInfo} className="flex items-center justify-center bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 text-sm disabled:opacity-50">
             <DownloadIcon className="w-4 h-4 mr-2" />
-            Tải về Từ khóa (.csv)
+            Tải về Từ khóa (.xlsx)
         </button>
-        <button onClick={handleDownloadVideos} className="flex items-center justify-center bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 text-sm">
+        <button onClick={handleDownloadVideos} disabled={!channelInfo} className="flex items-center justify-center bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 text-sm disabled:opacity-50">
             <DownloadIcon className="w-4 h-4 mr-2" />
-            Tải về Video (.csv)
+            Tải về Dữ liệu Video (.xlsx)
         </button>
       </div>
     </div>
