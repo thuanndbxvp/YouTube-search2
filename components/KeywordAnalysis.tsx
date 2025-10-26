@@ -130,7 +130,7 @@ export const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({ videos, channe
         <button 
              onClick={() => setIsHashtagModalOpen(true)}
             className="flex items-center justify-center bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 text-sm">
-            <span className="font-bold text-lg mr-2 -ml-1">#</span> Thẻ tag
+            <span className="font-bold text-lg leading-none mr-2 -ml-1">#</span> Thẻ tag
         </button>
       </div>
     </div>
