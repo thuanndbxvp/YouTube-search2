@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChannelInfo, Video, StoredConfig } from '../types';
+import { ChannelInfo, Video, StoredConfig, ChatMessage } from '../types';
 import { BrainstormModal } from './BrainstormModal';
 import { SparklesIcon } from './Icons';
 
@@ -7,9 +7,11 @@ interface AnalysisToolsProps {
     channelInfo: ChannelInfo;
     videos: Video[];
     appConfig: StoredConfig;
+    brainstormMessages: ChatMessage[];
+    setBrainstormMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
 }
 
-export const AnalysisTools: React.FC<AnalysisToolsProps> = ({ channelInfo, videos, appConfig }) => {
+export const AnalysisTools: React.FC<AnalysisToolsProps> = ({ channelInfo, videos, appConfig, brainstormMessages, setBrainstormMessages }) => {
     const [isBrainstormModalOpen, setIsBrainstormModalOpen] = useState(false);
 
     const isBrainstormDisabled = !appConfig.gemini.key && !appConfig.openai.key;
@@ -20,8 +22,9 @@ export const AnalysisTools: React.FC<AnalysisToolsProps> = ({ channelInfo, video
                 isOpen={isBrainstormModalOpen}
                 onClose={() => setIsBrainstormModalOpen(false)}
                 channelInfo={channelInfo}
-                videos={videos}
                 appConfig={appConfig}
+                messages={brainstormMessages}
+                setMessages={setBrainstormMessages}
             />
             <div>
                 <h2 className="text-xl font-bold text-indigo-300 mb-2">

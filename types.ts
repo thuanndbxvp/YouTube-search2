@@ -1,4 +1,3 @@
-
 export interface StoredConfig {
   youtube: {
     key: string;
@@ -68,6 +67,7 @@ export interface SavedSession {
   channelInfo: ChannelInfo;
   videos: Video[];
   nextPageToken?: string;
+  brainstormMessages?: ChatMessage[];
 }
 
 export interface ChatMessage {

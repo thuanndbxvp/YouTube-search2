@@ -1,17 +1,16 @@
-
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { ChannelInfo, Video, StoredConfig, AiProvider, ChatMessage } from '../types';
+import React, { useState, useEffect, useRef } from 'react';
+import { ChannelInfo, StoredConfig, AiProvider, ChatMessage } from '../types';
 import { generateGeminiChatResponse } from '../services/geminiService';
 import { generateOpenAIChatResponse } from '../services/openaiService';
 import { PaperAirplaneIcon } from './Icons';
-import { vietnameseStopWords } from './KeywordAnalysis';
 
 interface BrainstormModalProps {
   isOpen: boolean;
   onClose: () => void;
   channelInfo: ChannelInfo;
-  videos: Video[];
   appConfig: StoredConfig;
+  messages: ChatMessage[];
+  setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
 }
 
 const AiProviderSelector: React.FC<{
@@ -38,60 +37,21 @@ const AiProviderSelector: React.FC<{
 };
 
 
-export const BrainstormModal: React.FC<BrainstormModalProps> = ({ isOpen, onClose, channelInfo, videos, appConfig }) => {
+export const BrainstormModal: React.FC<BrainstormModalProps> = ({ isOpen, onClose, channelInfo, appConfig, messages, setMessages }) => {
   const [selectedAi, setSelectedAi] = useState<AiProvider>('gemini');
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentMessage, setCurrentMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  const topKeywords = useMemo(() => {
-    const counts = new Map<string, number>();
-    videos.forEach(video => {
-        const title = video.snippet.title.toLowerCase();
-        const originalWords = title.split(/\s+/).filter(Boolean);
-        for (let n = 1; n <= 3; n++) {
-            if (originalWords.length < n) continue;
-            for (let i = 0; i <= originalWords.length - n; i++) {
-                const ngramWords = originalWords.slice(i, i + n);
-                if (vietnameseStopWords.has(ngramWords[0]) || vietnameseStopWords.has(ngramWords[n - 1])) continue;
-                const phrase = ngramWords.join(' ').replace(/[/,.\-()|[\]"“”:?!]+/g, '').trim();
-                if (phrase && phrase.length > 2 && isNaN(parseInt(phrase))) {
-                    counts.set(phrase, (counts.get(phrase) || 0) + 1);
-                }
-            }
-        }
-    });
-     const filteredCounts = new Map<string, number>();
-     for (const [key, value] of counts.entries()) {
-         if (value > 1) filteredCounts.set(key, value);
-     }
-    return Array.from(filteredCounts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 10).map(k => k[0]);
-  }, [videos]);
-
-
   useEffect(() => {
+    if (!isOpen) return;
     // Set default AI provider based on available keys
     if (appConfig.gemini.key) {
         setSelectedAi('gemini');
     } else if (appConfig.openai.key) {
         setSelectedAi('openai');
     }
-
-    // Create initial system message
-    if (isOpen && channelInfo) {
-      const systemPrompt = `Xin chào! Tôi là trợ lý AI sáng tạo của bạn. Tôi đã xem qua kênh "${channelInfo.title}" và nhận thấy các chủ đề nổi bật gần đây là: **${topKeywords.join(', ')}**.
-      
-Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video mới hôm nay? Bạn có thể hỏi tôi về:
-- 5 ý tưởng video mới dựa trên từ khóa "abc".
-- Gợi ý một tiêu đề hấp dẫn cho video về "xyz".
-- Phân tích đối tượng khán giả của kênh.`;
-      
-      setMessages([{ role: 'model', content: systemPrompt }]);
-    } else {
-      setMessages([]);
-    }
-  }, [isOpen, channelInfo, topKeywords, appConfig]);
+  }, [isOpen, appConfig.gemini.key, appConfig.openai.key]);
 
   useEffect(() => {
     // Auto-scroll to the bottom of the chat

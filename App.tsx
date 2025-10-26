@@ -1,14 +1,15 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Header } from './components/Header';
 import { ApiModal } from './components/ApiModal';
 import { LibraryModal } from './components/LibraryModal';
 import { ChannelInputForm } from './components/ChannelInputForm';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { Video, ChannelInfo, StoredConfig, SavedSession } from './types';
+import { Video, ChannelInfo, StoredConfig, SavedSession, ChatMessage } from './types';
 import { getChannelInfoByUrl, fetchVideosPage } from './services/youtubeService';
 import { VideoTable } from './components/VideoTable';
 import { KeywordAnalysis } from './components/KeywordAnalysis';
 import { AnalysisTools } from './components/AnalysisTools';
+import { calculateKeywordCounts, getTopKeywords } from './utils/keywords';
 
 const initialConfig: StoredConfig = {
   youtube: { key: '' },
@@ -30,7 +31,20 @@ export default function App() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved'>('idle');
+  const [brainstormMessages, setBrainstormMessages] = useState<ChatMessage[]>([]);
 
+
+  const createInitialBrainstormMessage = useCallback((chInfo: ChannelInfo, keywords: string[]): ChatMessage[] => {
+      if (!chInfo || keywords.length === 0) return [];
+      const systemPrompt = `Xin chào! Tôi là trợ lý AI sáng tạo của bạn. Tôi đã xem qua kênh "${chInfo.title}" và nhận thấy các chủ đề nổi bật gần đây là: **${keywords.join(', ')}**.
+      
+Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video mới hôm nay? Bạn có thể hỏi tôi về:
+- 5 ý tưởng video mới dựa trên từ khóa "abc".
+- Gợi ý một tiêu đề hấp dẫn cho video về "xyz".
+- Phân tích đối tượng khán giả của kênh.`;
+      
+      return [{ role: 'model', content: systemPrompt }];
+  }, []);
 
   const handleFetchVideos = useCallback(async (channelUrl: string) => {
     const youtubeApiKey = appConfig.youtube.key;
@@ -44,6 +58,7 @@ export default function App() {
     setVideos([]);
     setChannelInfo(null);
     setNextPageToken(undefined);
+    setBrainstormMessages([]);
 
     try {
       const info = await getChannelInfoByUrl(channelUrl, youtubeApiKey);
@@ -52,13 +67,18 @@ export default function App() {
       const videoData = await fetchVideosPage(info.uploadsPlaylistId, youtubeApiKey);
       setVideos(videoData.videos);
       setNextPageToken(videoData.nextPageToken);
+
+      const keywordCounts = calculateKeywordCounts(videoData.videos);
+      const topKeywords = getTopKeywords(keywordCounts, 10);
+      setBrainstormMessages(createInitialBrainstormMessage(info, topKeywords));
+
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi không xác định.');
     } finally {
       setIsLoading(false);
     }
-  }, [appConfig]);
+  }, [appConfig, createInitialBrainstormMessage]);
 
   const handleLoadMore = useCallback(async () => {
     const youtubeApiKey = appConfig.youtube.key;
@@ -87,6 +107,7 @@ export default function App() {
       channelInfo,
       videos,
       nextPageToken,
+      brainstormMessages,
     };
     
     setSavedSessions(prev => {
@@ -109,6 +130,15 @@ export default function App() {
       setChannelInfo(session.channelInfo);
       setVideos(session.videos);
       setNextPageToken(session.nextPageToken);
+      
+      if (session.brainstormMessages && session.brainstormMessages.length > 0) {
+        setBrainstormMessages(session.brainstormMessages);
+      } else {
+        const keywordCounts = calculateKeywordCounts(session.videos);
+        const topKeywords = getTopKeywords(keywordCounts, 10);
+        setBrainstormMessages(createInitialBrainstormMessage(session.channelInfo, topKeywords));
+      }
+
       setIsLibraryModalOpen(false);
       setError(null);
     }
@@ -159,6 +189,8 @@ export default function App() {
                           videos={videos} 
                           channelInfo={channelInfo} 
                           appConfig={appConfig} 
+                          brainstormMessages={brainstormMessages}
+                          setBrainstormMessages={setBrainstormMessages}
                         />
                     </div>
                 </div>
