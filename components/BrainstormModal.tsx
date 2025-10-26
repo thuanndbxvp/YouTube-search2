@@ -65,11 +65,7 @@ export const BrainstormModal: React.FC<BrainstormModalProps> = ({ isOpen, onClos
   }, [messages]);
 
   const handleAudienceAnalysis = async () => {
-    const hasExistingAnalysis = messages.some(
-        msg => msg.role === 'user' && msg.content.startsWith(ANALYSIS_PROMPT_IDENTIFIER)
-    );
-
-    if (hasExistingAnalysis || isAnalyzing || isLoading) {
+    if (isAnalyzing || isLoading) {
         return;
     }
 
@@ -242,11 +238,11 @@ Bạn chỉ cần sao chép và dán một trong các câu hỏi trên hoặc đ
           <div className="mb-2">
                 <button
                     onClick={handleAudienceAnalysis}
-                    disabled={isLoading || hasExistingAnalysis}
+                    disabled={isLoading}
                     className="w-full flex items-center justify-center text-sm bg-sky-600 hover:bg-sky-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                     <UsersIcon className="h-5 w-5 mr-2" />
-                    {isAnalyzing ? 'Đang phân tích...' : (hasExistingAnalysis ? 'Đã phân tích kênh' : 'Phân tích kênh')}
+                    {isAnalyzing ? 'Đang phân tích...' : (hasExistingAnalysis ? 'Phân tích lại kênh' : 'Phân tích kênh')}
                 </button>
           </div>
           <form onSubmit={handleSendMessage} className="flex items-center space-x-2">
