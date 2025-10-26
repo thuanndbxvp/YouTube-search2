@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
-import { ChannelInfo, StoredConfig, ChatMessage, AiProvider } from '../types';
+import { ChannelInfo, StoredConfig, ChatMessage, AiProvider, Video } from '../types';
 import { BrainstormModal } from './BrainstormModal';
 import { SparklesIcon, UsersIcon } from './Icons';
 import { generateGeminiChatResponse } from '../services/geminiService';
 import { generateOpenAIChatResponse } from '../services/openaiService';
+import { formatDate, formatNumber, parseISO8601Duration } from '../utils/formatters';
+
 
 interface AnalysisToolsProps {
+    videos: Video[];
     channelInfo: ChannelInfo;
     appConfig: StoredConfig;
     brainstormMessages: ChatMessage[];
     setBrainstormMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
 }
 
-export const AnalysisTools: React.FC<AnalysisToolsProps> = ({ channelInfo, appConfig, brainstormMessages, setBrainstormMessages }) => {
+export const AnalysisTools: React.FC<AnalysisToolsProps> = ({ videos, channelInfo, appConfig, brainstormMessages, setBrainstormMessages }) => {
     const [isBrainstormModalOpen, setIsBrainstormModalOpen] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
 
@@ -24,10 +27,28 @@ export const AnalysisTools: React.FC<AnalysisToolsProps> = ({ channelInfo, appCo
         setIsBrainstormModalOpen(true);
 
         const provider: AiProvider = appConfig.gemini.key && appConfig.gemini.key.trim() !== '' ? 'gemini' : 'openai';
+        
+        const videoDataSummary = videos.slice(0, 50).map((video, index) => {
+            return `
+---
+Video ${index + 1}:
+- Tiêu đề: ${video.snippet.title}
+- Ngày đăng: ${formatDate(video.snippet.publishedAt)}
+- Lượt xem: ${formatNumber(video.statistics.viewCount)}
+- Lượt thích: ${formatNumber(video.statistics.likeCount)}
+- Thời lượng: ${parseISO8601Duration(video.contentDetails.duration)}
+- Mô tả: ${(video.snippet.description || 'Không có').substring(0, 250)}...
+---
+`.trim();
+        }).join('\n\n');
 
         const audienceAnalysisPrompt = `Với tư cách là một chuyên gia phân tích kênh YouTube, hãy thực hiện một bài phân tích sâu về đối tượng khán giả của kênh "${channelInfo.title}", dựa trên dữ liệu từ các video gần đây.
 
-Vui lòng tuân thủ cấu trúc sau:
+Dưới đây là dữ liệu thô từ ${videos.length} video gần đây nhất để bạn tham khảo:
+
+${videoDataSummary}
+
+Vui lòng sử dụng dữ liệu trên để thực hiện phân tích và tuân thủ cấu trúc sau:
 
 1. **Xác định mục tiêu phân tích**
    - 📈 **Chiến lược nội dung:** Các chủ đề, tần suất, phong cách chính của kênh là gì?
@@ -52,7 +73,7 @@ Vui lòng tuân thủ cấu trúc sau:
    - **Hình ảnh & Âm nhạc:** Nhận xét về tone màu, nhịp độ dựng phim, và cách sử dụng nhạc nền.
    - **Tổng kết:** Kênh mang lại trải nghiệm cảm xúc gì cho người xem?
 
-Hãy trình bày phân tích của bạn một cách chi tiết và chuyên nghiệp.`;
+Hãy trình bày phân tích của bạn một cách chi tiết và chuyên nghiệp, sử dụng dữ liệu đã cung cấp làm cơ sở.`;
 
         const userMessage: ChatMessage = { role: 'user', content: audienceAnalysisPrompt };
         
