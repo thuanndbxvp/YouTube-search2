@@ -138,7 +138,26 @@ Hãy trình bày phân tích của bạn một cách chi tiết và chuyên nghi
             response = await generateOpenAIChatResponse(appConfig.openai.key, appConfig.openai.model, historyForApi);
         }
         const finalAiMessage: ChatMessage = { role: 'model', content: response };
-        setMessages(prev => [...prev, finalAiMessage]);
+        
+        const suggestionMessage: ChatMessage = {
+            role: 'model',
+            content: `Tuyệt vời! Dựa trên phân tích vừa rồi, bạn muốn khám phá tiếp theo về điều gì?
+
+**1. Bắt chước & Cải tiến:**
+*   "Dựa vào phong cách của kênh này, hãy gợi ý 5 ý tưởng video tương tự."
+*   "Viết một kịch bản ngắn cho video theo chủ đề [chủ đề nổi bật] giống như kênh này."
+*   "Những yếu tố nào tôi nên tập trung để tái tạo lại sự thành công của họ?"
+
+**2. Sáng tạo & Đột phá:**
+*   "Từ dữ liệu đã phân tích, hãy đề xuất 3 hướng đi mới cho một kênh có chủ đề tương tự."
+*   "Khán giả của kênh này có thể còn quan tâm đến những chủ đề nào khác chưa được khai thác?"
+*   "Làm thế nào để tôi tạo ra sự khác biệt so với kênh này?"
+
+Bạn chỉ cần sao chép và dán một trong các câu hỏi trên hoặc đặt câu hỏi của riêng bạn!`
+        };
+
+        setMessages(prev => [...prev, finalAiMessage, suggestionMessage]);
+
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Đã có lỗi xảy ra.";
         const errorAiMessage: ChatMessage = { role: 'model', content: `Lỗi: ${errorMessage}` };
@@ -227,7 +246,7 @@ Hãy trình bày phân tích của bạn một cách chi tiết và chuyên nghi
                     className="w-full flex items-center justify-center text-sm bg-sky-600 hover:bg-sky-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                     <UsersIcon className="h-5 w-5 mr-2" />
-                    {isAnalyzing ? 'Đang phân tích...' : (hasExistingAnalysis ? 'Đã phân tích kênh' : 'Phân tích đối tượng khán giả')}
+                    {isAnalyzing ? 'Đang phân tích...' : (hasExistingAnalysis ? 'Đã phân tích kênh' : 'Phân tích kênh')}
                 </button>
           </div>
           <form onSubmit={handleSendMessage} className="flex items-center space-x-2">
