@@ -11,8 +11,8 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onApiClick, onLibraryClick, onSaveSession, isSessionSavable, saveStatus }) => {
     return (
-        <header className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <div>
+        <header className="relative py-2">
+            <div className="text-center">
                 <h1 className="text-3xl md:text-4xl font-bold text-indigo-300">
                     Trình phân tích kênh YouTube
                 </h1>
@@ -20,7 +20,7 @@ export const Header: React.FC<HeaderProps> = ({ onApiClick, onLibraryClick, onSa
                     Nhận thông tin chi tiết và tóm tắt do AI tạo ra cho các video gần đây nhất.
                 </p>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="mt-4 flex items-center justify-center space-x-2 md:absolute md:right-0 md:top-1/2 md:-translate-y-1/2 md:mt-0">
                 <button 
                     onClick={onSaveSession}
                     disabled={!isSessionSavable || saveStatus === 'saved'}
