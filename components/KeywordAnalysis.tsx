@@ -19,27 +19,52 @@ const vietnameseStopWords = new Set([
     'mà', 'mỗi', 'một cách', 'này', 'nên', 'nếu', 'ngay', 'nhiều', 'như', 'nhưng',
     'những', 'nơi', 'nữa', 'phải', 'qua', 'ra', 'rằng', 'rất', 'rồi', 'sau', 'sẽ',
     'so', 'sự', 'tại', 'theo', 'thì', 'trên', 'trước', 'từ', 'từng', 'và', 'vào', 'vẫn',
-    'về', 'vì', 'với', 'vừa', 'thứ', 'anh', 'em', 'chị', 'bạn', 'tôi',
+    'về', 'vì', 'với', 'vừa', 'thứ', 'anh', 'em', 'chị', 'bạn', 'tôi', 'cách', 'để có', 'làm sao',
     // English common words
-    'a','an','the','and','or','but','for','in','on','at','to','of','i','you','he','she','it','we','they','is','are','was','were','be','been','being','have','has','had','do','does','did','will','would','should','can','could','not','no','this','that','these','those','my','your','his','her','its','our','their', 'with', 'from', 'by', 'as', 'into', 'through', 'during', 'before', 'after', 'above', 'below',
+    'a','an','the','and','or','but','for','in','on','at','to','of','i','you','he','she','it','we','they','is','are','was','were','be','been','being','have','has','had','do','does','did','will','would','should','can','could','not','no','this','that','these','those','my','your','his','her','its','our','their', 'with', 'from', 'by', 'as', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'how', 'what', 'when', 'where', 'why',
     // Common YouTube title filler
-    'new', 'hot', 'top', 'best', 'official', 'video', 'music', 'live', 'full', 'hd', 'mv', 'ep', 'part', 'series'
+    'new', 'hot', 'top', 'best', 'official', 'video', 'music', 'live', 'full', 'hd', 'mv', 'ep', 'part', 'series', 'episode'
 ]);
 
 export const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({ videos, channelInfo }) => {
   const keywordCounts = useMemo(() => {
     const counts = new Map<string, number>();
+    
     videos.forEach(video => {
-      // Improved word matching for Vietnamese and removal of punctuation
-      const titleWords = video.snippet.title.toLowerCase().split(/[\s,.\-()|[\]]+/).filter(Boolean);
-      titleWords.forEach(word => {
-        if (word.length > 2 && !vietnameseStopWords.has(word) && isNaN(parseInt(word))) { 
-          counts.set(word, (counts.get(word) || 0) + 1);
+      const title = video.snippet.title.toLowerCase();
+      
+      const originalWords = title.split(/\s+/).filter(Boolean);
+
+      // Generate N-grams (phrases of 1, 2, and 3 words)
+      for (let n = 1; n <= 3; n++) {
+        if(originalWords.length < n) continue;
+        for (let i = 0; i <= originalWords.length - n; i++) {
+          const ngramWords = originalWords.slice(i, i + n);
+          
+          // Filter out phrases that start or end with a stop word, or are just a single stop word
+          if (vietnameseStopWords.has(ngramWords[0]) || vietnameseStopWords.has(ngramWords[n - 1])) {
+              continue;
+          }
+
+          const phrase = ngramWords.join(' ').replace(/[/,.\-()|[\]"“”:?!]+/g, '').trim();
+          
+          if (phrase && phrase.length > 2 && isNaN(parseInt(phrase))) {
+             counts.set(phrase, (counts.get(phrase) || 0) + 1);
+          }
         }
-      });
+      }
     });
-    return new Map([...counts.entries()].sort((a, b) => b[1] - a[1]));
+
+    const filteredCounts = new Map<string, number>();
+    for(const [key, value] of counts.entries()) {
+        if(value > 1) { // Only include keywords/phrases that appear more than once
+            filteredCounts.set(key, value);
+        }
+    }
+    
+    return new Map([...filteredCounts.entries()].sort((a, b) => b[1] - a[1]));
   }, [videos]);
+
 
   const topKeywords = Array.from(keywordCounts.entries()).slice(0, 20);
 
@@ -52,7 +77,7 @@ export const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({ videos, channe
     }));
     
     const worksheet = XLSX.utils.json_to_sheet(data);
-    worksheet['!cols'] = [{ wch: 5 }, { wch: 25 }, { wch: 20 }];
+    worksheet['!cols'] = [{ wch: 5 }, { wch: 35 }, { wch: 20 }];
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Keywords');
     const safeChannelName = channelInfo.title.replace(/[^\w\s]/gi, '').replace(/\s+/g, '_');
@@ -64,6 +89,7 @@ export const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({ videos, channe
     
     const data = videos.map(video => ({
         'Tiêu đề': video.snippet.title,
+        'Mô tả': video.snippet.description,
         'Ngày đăng': formatDate(video.snippet.publishedAt),
         'Lượt xem': parseInt(video.statistics.viewCount, 10),
         'Lượt thích': parseInt(video.statistics.likeCount, 10),
@@ -74,6 +100,7 @@ export const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({ videos, channe
     const worksheet = XLSX.utils.json_to_sheet(data);
     worksheet['!cols'] = [
         { wch: 70 }, // Title
+        { wch: 100 }, // Description
         { wch: 15 }, // Date
         { wch: 15 }, // Views
         { wch: 15 }, // Likes
@@ -93,7 +120,7 @@ export const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({ videos, channe
                 <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
                 <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
             </svg>
-            Từ khóa nổi bật nhất trong Tiêu đề
+            Từ khóa & Cụm từ nổi bật
         </h2>
       <div className="flex flex-wrap gap-2 mb-4">
         {topKeywords.map(([keyword, count]) => (
