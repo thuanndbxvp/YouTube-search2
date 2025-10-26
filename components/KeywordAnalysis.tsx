@@ -1,7 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Video, ChannelInfo } from '../types';
-import { DownloadIcon } from './Icons';
+import { DownloadIcon, InformationCircleIcon } from './Icons';
 import { formatDate, parseISO8601Duration } from '../utils/formatters';
+import { ChannelStatsModal } from './ChannelStatsModal';
+import { HashtagModal } from './HashtagModal';
 
 // Make XLSX globally available from the script tag in index.html
 declare const XLSX: any;
@@ -28,6 +30,9 @@ export const vietnameseStopWords = new Set([
 ]);
 
 export const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({ videos, channelInfo }) => {
+  const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
+  const [isHashtagModalOpen, setIsHashtagModalOpen] = useState(false);
+
   const keywordCounts = useMemo(() => {
     const counts = new Map<string, number>();
     
@@ -136,6 +141,16 @@ export const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({ videos, channe
 
   return (
     <div>
+        <ChannelStatsModal 
+            isOpen={isStatsModalOpen}
+            onClose={() => setIsStatsModalOpen(false)}
+            channelInfo={channelInfo}
+        />
+        <HashtagModal
+            isOpen={isHashtagModalOpen}
+            onClose={() => setIsHashtagModalOpen(false)}
+            videos={videos}
+        />
         <h2 className="text-xl font-bold text-indigo-300 mb-4 flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
@@ -154,6 +169,17 @@ export const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({ videos, channe
         <button onClick={handleDownloadChannelData} disabled={!channelInfo} className="flex items-center justify-center bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 text-sm disabled:opacity-50">
             <DownloadIcon className="w-4 h-4 mr-2" />
             Tải về Dữ liệu Kênh (.xlsx)
+        </button>
+         <button 
+            onClick={() => setIsStatsModalOpen(true)}
+            className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 text-sm">
+            <InformationCircleIcon className="h-5 w-5 mr-2" />
+            Thông tin kênh
+        </button>
+        <button 
+             onClick={() => setIsHashtagModalOpen(true)}
+            className="flex items-center justify-center bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 text-sm">
+            <span className="font-bold text-lg mr-2 -ml-1">#</span> Thẻ tag
         </button>
       </div>
     </div>
