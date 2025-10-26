@@ -86,14 +86,14 @@ export default function App() {
           <ChannelInputForm onSubmit={handleFetchVideos} isLoading={isLoading} />
           {error && <div className="mt-4 text-center text-red-400 bg-red-900/50 p-3 rounded-lg">{error}</div>}
           
-          {videos.length > 0 && !isLoading && (
+          {videos.length > 0 && channelInfo && !isLoading && (
             <div className="mt-8 p-6 bg-[#24283b] rounded-lg">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-6">
                     <div className="lg:col-span-2">
                         <KeywordAnalysis videos={videos} channelInfo={channelInfo} />
                     </div>
                     <div>
-                        <AnalysisTools />
+                        <AnalysisTools videos={videos} channelInfo={channelInfo} />
                     </div>
                 </div>
                 <VideoTable videos={videos} />

@@ -71,7 +71,7 @@ export const getChannelInfoByUrl = async (channelUrl: string, apiKey: string): P
 
     // Now that we have a channelId, fetch the full channel details to get the uploads playlist.
     const channelDetailsParams = new URLSearchParams({
-        part: 'snippet,contentDetails',
+        part: 'snippet,contentDetails,statistics',
         id: channelId,
         key: apiKey
     });
@@ -93,8 +93,14 @@ export const getChannelInfoByUrl = async (channelUrl: string, apiKey: string): P
     return {
         id: channelData.id,
         title: channelData.snippet.title,
+        description: channelData.snippet.description,
+        customUrl: channelData.snippet.customUrl,
+        publishedAt: channelData.snippet.publishedAt,
         thumbnail: channelData.snippet.thumbnails.default.url,
-        uploadsPlaylistId: channelData.contentDetails.relatedPlaylists.uploads
+        uploadsPlaylistId: channelData.contentDetails.relatedPlaylists.uploads,
+        country: channelData.snippet.country,
+        subscriberCount: channelData.statistics.subscriberCount,
+        videoCount: channelData.statistics.videoCount,
     };
 };
 

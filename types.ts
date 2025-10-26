@@ -52,6 +52,12 @@ export interface Video {
 export interface ChannelInfo {
     id: string;
     title: string;
+    description: string;
+    customUrl: string;
+    publishedAt: string;
     thumbnail: string;
     uploadsPlaylistId: string;
+    country?: string;
+    subscriberCount: string;
+    videoCount: string;
 }
