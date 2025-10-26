@@ -110,7 +110,7 @@ export const VideoTable: React.FC<VideoTableProps> = ({ videos }) => {
               <td className="p-3 text-sm text-indigo-200 font-bold whitespace-nowrap max-w-xs truncate" title={video.snippet.title}>
                 {video.snippet.title}
               </td>
-              <td className="p-3 text-xs text-gray-400 max-w-xs truncate" title={video.snippet.description}>
+              <td className="p-3 text-xs text-gray-400 max-w-xs whitespace-pre-wrap" title={video.snippet.description}>
                 {video.snippet.description || 'Không có mô tả.'}
               </td>
               <td className="p-3 text-sm text-gray-300 whitespace-nowrap">{formatDate(video.snippet.publishedAt)}</td>
