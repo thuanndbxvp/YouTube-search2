@@ -132,9 +132,9 @@ export const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({ videos, channe
 
     // Create workbook and append sheets
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, keywordsWorksheet, 'Từ khóa');
     XLSX.utils.book_append_sheet(workbook, videosWorksheet, 'Dữ liệu Video');
     XLSX.utils.book_append_sheet(workbook, hashtagsWorksheet, 'Hashtags');
+    XLSX.utils.book_append_sheet(workbook, keywordsWorksheet, 'Từ khóa');
     
     XLSX.writeFile(workbook, `Phantich_Kenh_${safeChannelName}.xlsx`);
   };

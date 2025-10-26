@@ -10,7 +10,7 @@ interface ApiModalProps {
 }
 
 const GEMINI_MODELS = ['gemini-2.5-pro', 'gemini-2.5-flash'];
-const OPENAI_MODELS = ['gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'];
+const OPENAI_MODELS = ['gpt-5', 'gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'];
 
 const ApiInput = ({ value, onChange, onClear, placeholder = 'Dán API Key của bạn vào đây' }: { value: string, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void, onClear: () => void, placeholder?: string }) => (
   <div className="relative">
@@ -139,7 +139,8 @@ export const ApiModal: React.FC<ApiModalProps> = ({ isOpen, onClose, config, set
                     onChange={e => handleConfigChange('openai', 'model', e.target.value)} 
                     className="w-full bg-[#1a1b26] border border-[#414868] rounded-md px-3 py-2 text-sm text-white focus:ring-1 focus:ring-indigo-500 outline-none"
                 >
-                    <option value="gpt-4o">GPT-4o (Mới nhất)</option>
+                    <option value="gpt-5">GPT-5 (Mới nhất)</option>
+                    <option value="gpt-4o">GPT-4o</option>
                     <option value="gpt-4-turbo">GPT-4 Turbo</option>
                     <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
                 </select>

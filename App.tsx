@@ -13,7 +13,7 @@ import { AnalysisTools } from './components/AnalysisTools';
 const initialConfig: StoredConfig = {
   youtube: { key: '' },
   gemini: { key: '', model: 'gemini-2.5-pro' },
-  openai: { key: '', model: 'gpt-4o' },
+  openai: { key: '', model: 'gpt-5' },
 };
 
 export default function App() {
