@@ -15,6 +15,8 @@ interface AnalysisToolsProps {
     setBrainstormMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
 }
 
+const ANALYSIS_PROMPT_IDENTIFIER = "Với tư cách là một chuyên gia phân tích kênh YouTube";
+
 export const AnalysisTools: React.FC<AnalysisToolsProps> = ({ videos, channelInfo, appConfig, brainstormMessages, setBrainstormMessages }) => {
     const [isBrainstormModalOpen, setIsBrainstormModalOpen] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -23,6 +25,15 @@ export const AnalysisTools: React.FC<AnalysisToolsProps> = ({ videos, channelInf
                                  (!appConfig.openai.key || appConfig.openai.key.trim() === '');
 
     const handleAudienceAnalysis = async () => {
+        const hasExistingAnalysis = brainstormMessages.some(
+            msg => msg.role === 'user' && msg.content.startsWith(ANALYSIS_PROMPT_IDENTIFIER)
+        );
+
+        if (hasExistingAnalysis) {
+            setIsBrainstormModalOpen(true);
+            return;
+        }
+
         setIsAnalyzing(true);
         setIsBrainstormModalOpen(true);
 
@@ -42,7 +53,7 @@ Video ${index + 1}:
 `.trim();
         }).join('\n\n');
 
-        const audienceAnalysisPrompt = `Với tư cách là một chuyên gia phân tích kênh YouTube, hãy thực hiện một bài phân tích sâu về đối tượng khán giả của kênh "${channelInfo.title}", dựa trên dữ liệu từ các video gần đây.
+        const audienceAnalysisPrompt = `${ANALYSIS_PROMPT_IDENTIFIER}, hãy thực hiện một bài phân tích sâu về đối tượng khán giả của kênh "${channelInfo.title}", dựa trên dữ liệu từ các video gần đây.
 
 Dưới đây là dữ liệu thô từ ${videos.length} video gần đây nhất để bạn tham khảo:
 
@@ -129,10 +140,10 @@ Hãy trình bày phân tích của bạn một cách chi tiết và chuyên nghi
                      <button 
                         onClick={handleAudienceAnalysis}
                         disabled={isBrainstormDisabled || isAnalyzing}
-                        title={isBrainstormDisabled ? "Vui lòng thêm API key để sử dụng" : "Phân tích đối tượng khán giả của kênh"}
+                        title={isBrainstormDisabled ? "Vui lòng thêm API key để sử dụng" : "Phân tích kênh"}
                         className="w-full flex items-center justify-center bg-sky-600 hover:bg-sky-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed">
                         <UsersIcon className="h-5 w-5 mr-2" />
-                        {isAnalyzing ? 'Đang phân tích...' : 'Phân tích Khán giả'}
+                        {isAnalyzing ? 'Đang phân tích...' : 'Phân tích kênh'}
                     </button>
                 </div>
             </div>
