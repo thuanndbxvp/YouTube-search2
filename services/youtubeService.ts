@@ -2,6 +2,32 @@ import { ChannelInfo, Video } from '../types';
 
 const API_BASE_URL = 'https://www.googleapis.com/youtube/v3';
 
+async function executeWithKeyRotation<T>(
+    keysString: string,
+    apiRequest: (key: string) => Promise<T>
+): Promise<T> {
+    const keys = keysString.split(/[\n,]+/).map(k => k.trim()).filter(Boolean);
+    if (keys.length === 0) {
+        throw new Error("Không có YouTube API key nào được cung cấp.");
+    }
+
+    let lastError: any = null;
+
+    for (const key of keys) {
+        try {
+            const result = await apiRequest(key);
+            return result;
+        } catch (error: any) {
+            lastError = error;
+            console.warn(`YouTube API key ...${key.slice(-4)} thất bại. Thử key tiếp theo. Lỗi: ${error.message}`);
+            continue;
+        }
+    }
+    
+    throw new Error(`Tất cả API key của YouTube đều không hợp lệ hoặc đã hết hạn ngạch. Lỗi cuối cùng: ${lastError.message}`);
+}
+
+
 const extractChannelIdentifier = (url: string): string | null => {
     try {
         const urlObj = new URL(url);
@@ -28,13 +54,13 @@ const extractChannelIdentifier = (url: string): string | null => {
 async function handleApiResponse<T,>(response: Response): Promise<T> {
     const data = await response.json();
     if (!response.ok) {
-        const message = data.error?.message || 'An unknown API error occurred.';
+        const message = data.error?.message || 'Đã xảy ra lỗi không xác định từ API.';
         throw new Error(message);
     }
     return data;
 }
 
-export const getChannelInfoByUrl = async (channelUrl: string, apiKey: string): Promise<ChannelInfo> => {
+const getChannelInfoInternal = async (channelUrl: string, apiKey: string): Promise<ChannelInfo> => {
     const identifier = extractChannelIdentifier(channelUrl);
     if (!identifier) {
         throw new Error('Định dạng URL kênh YouTube không hợp lệ.');
@@ -42,12 +68,9 @@ export const getChannelInfoByUrl = async (channelUrl: string, apiKey: string): P
 
     let channelId: string | undefined;
 
-    // Case 1: The identifier is a standard channel ID. We can fetch details directly.
     if (identifier.startsWith('UC') || identifier.startsWith('HC')) {
         channelId = identifier;
     } 
-    // Case 2: The identifier is a handle, custom URL, or legacy username.
-    // We must use the search endpoint to find the channel's ID.
     else {
         const searchParams = new URLSearchParams({
             part: 'id',
@@ -69,7 +92,6 @@ export const getChannelInfoByUrl = async (channelUrl: string, apiKey: string): P
          throw new Error('Không tìm thấy kênh. Vui lòng kiểm tra lại URL.');
     }
 
-    // Now that we have a channelId, fetch the full channel details to get the uploads playlist.
     const channelDetailsParams = new URLSearchParams({
         part: 'snippet,contentDetails,statistics',
         id: channelId,
@@ -80,7 +102,6 @@ export const getChannelInfoByUrl = async (channelUrl: string, apiKey: string): P
     const data = await handleApiResponse<{ items: any[] }>(response);
     
     if (!data.items || data.items.length === 0) {
-        // This should be rare if the search worked, but it's a good safeguard.
         throw new Error('Không tìm thấy kênh. Vui lòng kiểm tra lại URL.');
     }
 
@@ -104,12 +125,11 @@ export const getChannelInfoByUrl = async (channelUrl: string, apiKey: string): P
     };
 };
 
-export const fetchVideosPage = async (
+const fetchVideosPageInternal = async (
     playlistId: string, 
     apiKey: string, 
     pageToken?: string
 ): Promise<{ videos: Video[], nextPageToken?: string }> => {
-    
     const playlistItemsParams = new URLSearchParams({
         part: 'snippet',
         playlistId: playlistId,
@@ -153,16 +173,31 @@ export const fetchVideosPage = async (
     };
 };
 
-export const validateApiKey = async (apiKey: string): Promise<boolean> => {
-    if (!apiKey) return false;
-    // We make a simple, low-cost API call to check for authentication errors.
-    // Fetching details for the official YouTube channel is a reliable way to do this.
-    const validationUrl = `${API_BASE_URL}/channels?part=snippet&id=UC_x5XG1OV2P6uZZ5FSM9Ttw&key=${apiKey}`;
-    try {
-        const response = await fetch(validationUrl);
-        return response.ok;
-    } catch (error) {
-        console.error("YouTube key validation failed:", error);
-        return false;
+export const getChannelInfoByUrl = async (channelUrl: string, apiKeys: string): Promise<ChannelInfo> => {
+    return executeWithKeyRotation(apiKeys, (key) => getChannelInfoInternal(channelUrl, key));
+};
+
+export const fetchVideosPage = async (
+    playlistId: string, 
+    apiKeys: string, 
+    pageToken?: string
+): Promise<{ videos: Video[], nextPageToken?: string }> => {
+    return executeWithKeyRotation(apiKeys, (key) => fetchVideosPageInternal(playlistId, key, pageToken));
+};
+
+export const validateApiKey = async (apiKeys: string): Promise<boolean> => {
+    const keys = apiKeys.split(/[\n,]+/).map(k => k.trim()).filter(Boolean);
+    if (keys.length === 0) return false;
+
+    for (const key of keys) {
+        if (!key) continue;
+        const validationUrl = `${API_BASE_URL}/channels?part=snippet&id=UC_x5XG1OV2P6uZZ5FSM9Ttw&key=${key}`;
+        try {
+            const response = await fetch(validationUrl);
+            if (response.ok) return true; // Found a valid key
+        } catch (error) {
+            console.error(`YouTube key validation failed for ...${key.slice(-4)}:`, error);
+        }
     }
+    return false; // No valid key found
 };

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { StoredConfig } from '../types';
-import { TrashIcon } from './Icons';
 
 interface ApiModalProps {
   isOpen: boolean;
@@ -12,21 +11,14 @@ interface ApiModalProps {
 const GEMINI_MODELS = ['gemini-2.5-pro', 'gemini-2.5-flash'];
 const OPENAI_MODELS = ['gpt-5', 'gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'];
 
-const ApiInput = ({ value, onChange, onClear, placeholder = 'Dán API Key của bạn vào đây' }: { value: string, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void, onClear: () => void, placeholder?: string }) => (
-  <div className="relative">
-    <input
-      type="password"
+const ApiTextarea = ({ value, onChange, placeholder }: { value: string, onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void, placeholder?: string }) => (
+    <textarea
       value={value}
       onChange={onChange}
       placeholder={placeholder}
-      className="w-full bg-[#1a1b26] border border-[#414868] rounded-md px-3 py-2 text-sm text-white focus:ring-1 focus:ring-indigo-500 outline-none pr-10"
+      rows={3}
+      className="w-full bg-[#1a1b26] border border-[#414868] rounded-md px-3 py-2 text-sm text-white focus:ring-1 focus:ring-indigo-500 outline-none"
     />
-    {value && (
-      <button onClick={onClear} className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-white">
-        <TrashIcon className="w-5 h-5" />
-      </button>
-    )}
-  </div>
 );
 
 const HowToGetApiKey = () => (
@@ -96,11 +88,11 @@ export const ApiModal: React.FC<ApiModalProps> = ({ isOpen, onClose, config, set
             {/* YouTube Section */}
             <div>
               <h3 className="text-lg font-semibold text-red-400 mb-2">YouTube Data API</h3>
-              <label className="block text-sm font-medium text-gray-300 mb-1">API Key (Bắt buộc)</label>
-              <ApiInput 
+              <label className="block text-sm font-medium text-gray-300 mb-1">API Keys (Bắt buộc)</label>
+              <ApiTextarea 
                 value={localConfig.youtube.key} 
                 onChange={e => handleConfigChange('youtube', 'key', e.target.value)}
-                onClear={() => handleConfigChange('youtube', 'key', '')}
+                placeholder="Dán một hoặc nhiều API Key, mỗi key một dòng."
               />
               <HowToGetApiKey />
             </div>
@@ -108,11 +100,11 @@ export const ApiModal: React.FC<ApiModalProps> = ({ isOpen, onClose, config, set
             {/* Gemini Section */}
             <div>
               <h3 className="text-lg font-semibold text-purple-400 mb-2">Google Gemini</h3>
-              <label className="block text-sm font-medium text-gray-300 mb-1">API Key</label>
-              <ApiInput 
+              <label className="block text-sm font-medium text-gray-300 mb-1">API Keys</label>
+              <ApiTextarea 
                 value={localConfig.gemini.key} 
                 onChange={e => handleConfigChange('gemini', 'key', e.target.value)}
-                onClear={() => handleConfigChange('gemini', 'key', '')}
+                placeholder="Dán một hoặc nhiều API Key, mỗi key một dòng."
               />
                <label className="block text-sm font-medium text-gray-300 mt-3 mb-1">Model</label>
                 <select 
@@ -127,11 +119,11 @@ export const ApiModal: React.FC<ApiModalProps> = ({ isOpen, onClose, config, set
             {/* OpenAI Section */}
             <div>
               <h3 className="text-lg font-semibold text-cyan-400 mb-2">OpenAI</h3>
-                <label className="block text-sm font-medium text-gray-300 mb-1">API Key</label>
-                <ApiInput 
+                <label className="block text-sm font-medium text-gray-300 mb-1">API Keys</label>
+                <ApiTextarea 
                     value={localConfig.openai.key} 
                     onChange={e => handleConfigChange('openai', 'key', e.target.value)}
-                    onClear={() => handleConfigChange('openai', 'key', '')}
+                    placeholder="Dán một hoặc nhiều API Key, mỗi key một dòng."
                 />
                 <label className="block text-sm font-medium text-gray-300 mt-3 mb-1">Model</label>
                 <select 
