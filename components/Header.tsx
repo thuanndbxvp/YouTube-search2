@@ -1,13 +1,15 @@
-
 import React from 'react';
-// FIX: Removed unused 'SearchIcon' which is not exported from './Icons'.
 import { BookmarkIcon, LibraryIcon, KeyIcon } from './Icons';
 
 interface HeaderProps {
     onApiClick: () => void;
+    onLibraryClick: () => void;
+    onSaveSession: () => void;
+    isSessionSavable: boolean;
+    saveStatus: 'idle' | 'saved';
 }
 
-export const Header: React.FC<HeaderProps> = ({ onApiClick }) => {
+export const Header: React.FC<HeaderProps> = ({ onApiClick, onLibraryClick, onSaveSession, isSessionSavable, saveStatus }) => {
     return (
         <header className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div>
@@ -19,11 +21,15 @@ export const Header: React.FC<HeaderProps> = ({ onApiClick }) => {
                 </p>
             </div>
             <div className="flex items-center space-x-2">
-                <button className="flex items-center justify-center bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50" disabled>
+                <button 
+                    onClick={onSaveSession}
+                    disabled={!isSessionSavable || saveStatus === 'saved'}
+                    className="flex items-center justify-center bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 w-36"
+                >
                     <BookmarkIcon className="w-5 h-5 mr-2" />
-                    Lưu phiên
+                    {saveStatus === 'saved' ? 'Đã lưu!' : 'Lưu phiên'}
                 </button>
-                <button className="flex items-center justify-center bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50" disabled>
+                <button onClick={onLibraryClick} className="flex items-center justify-center bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200">
                     <LibraryIcon className="w-5 h-5 mr-2" />
                     Thư viện
                 </button>

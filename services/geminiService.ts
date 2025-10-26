@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { ChatMessage } from '../types';
 
 export const validateApiKey = async (apiKey: string): Promise<boolean> => {
   if (!apiKey) return false;
@@ -6,7 +7,7 @@ export const validateApiKey = async (apiKey: string): Promise<boolean> => {
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
-        contents: 'test',
+        contents: [{ parts: [{text: 'test'}]}],
     });
     // A successful response, even if empty, indicates a valid key.
     return !!response;
@@ -44,7 +45,7 @@ export const analyzeVideoContent = async (
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
-      contents: prompt,
+      contents: [{ parts: [{ text: prompt }] }],
     });
 
     return response.text;
@@ -54,5 +55,34 @@ export const analyzeVideoContent = async (
         throw new Error(`Lỗi từ Gemini API: ${error.message}`);
     }
     throw new Error("Đã xảy ra lỗi không xác định khi phân tích video.");
+  }
+};
+
+export const generateGeminiChatResponse = async (
+  apiKey: string,
+  model: string,
+  history: ChatMessage[]
+): Promise<string> => {
+  if (!apiKey) throw new Error("Vui lòng cung cấp Gemini API key.");
+  
+  const ai = new GoogleGenAI({ apiKey });
+  
+  const contents = history.map(msg => ({
+      role: msg.role,
+      parts: [{ text: msg.content }]
+  }));
+
+  try {
+    const response = await ai.models.generateContent({
+      model,
+      contents,
+    });
+    return response.text;
+  } catch (error) {
+    console.error("Error generating chat response with Gemini:", error);
+    if (error instanceof Error) {
+        throw new Error(`Lỗi từ Gemini API: ${error.message}`);
+    }
+    throw new Error("Đã xảy ra lỗi không xác định khi chat với Gemini.");
   }
 };

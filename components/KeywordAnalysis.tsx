@@ -11,7 +11,8 @@ interface KeywordAnalysisProps {
   channelInfo: ChannelInfo | null;
 }
 
-const vietnameseStopWords = new Set([
+// FIX: Export `vietnameseStopWords` to allow it to be used in other modules.
+export const vietnameseStopWords = new Set([
     'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín', 'mười', 'bị', 'bởi', 'cả',
     'cần', 'càng', 'chắc', 'chắn', 'chỉ', 'chiếc', 'cho', 'chứ', 'chưa', 'có', 'có thể',
     'cứ', 'của', 'cùng', 'cũng', 'đã', 'đang', 'đây', 'để', 'đến', 'đều', 'điều', 'do',

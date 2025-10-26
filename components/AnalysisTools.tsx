@@ -1,16 +1,22 @@
 import React, { useState } from 'react';
-import { ChannelInfo, Video } from '../types';
+import { ChannelInfo, Video, StoredConfig } from '../types';
 import { ChannelStatsModal } from './ChannelStatsModal';
 import { HashtagModal } from './HashtagModal';
+import { BrainstormModal } from './BrainstormModal';
+import { SparklesIcon } from './Icons';
 
 interface AnalysisToolsProps {
     channelInfo: ChannelInfo;
     videos: Video[];
+    appConfig: StoredConfig;
 }
 
-export const AnalysisTools: React.FC<AnalysisToolsProps> = ({ channelInfo, videos }) => {
+export const AnalysisTools: React.FC<AnalysisToolsProps> = ({ channelInfo, videos, appConfig }) => {
     const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
     const [isHashtagModalOpen, setIsHashtagModalOpen] = useState(false);
+    const [isBrainstormModalOpen, setIsBrainstormModalOpen] = useState(false);
+
+    const isBrainstormDisabled = !appConfig.gemini.key && !appConfig.openai.key;
 
     return (
         <>
@@ -24,6 +30,13 @@ export const AnalysisTools: React.FC<AnalysisToolsProps> = ({ channelInfo, video
                 onClose={() => setIsHashtagModalOpen(false)}
                 videos={videos}
             />
+            <BrainstormModal
+                isOpen={isBrainstormModalOpen}
+                onClose={() => setIsBrainstormModalOpen(false)}
+                channelInfo={channelInfo}
+                videos={videos}
+                appConfig={appConfig}
+            />
             <div>
                 <h2 className="text-xl font-bold text-indigo-300 mb-2">
                     Công cụ Phân tích & Sáng tạo
@@ -33,12 +46,12 @@ export const AnalysisTools: React.FC<AnalysisToolsProps> = ({ channelInfo, video
                 </p>
                 <div className="flex flex-col space-y-3">
                     <button 
-                        disabled
-                        className="w-full flex items-center justify-center bg-purple-600 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed">
+                        onClick={() => setIsBrainstormModalOpen(true)}
+                        disabled={isBrainstormDisabled}
+                        title={isBrainstormDisabled ? "Vui lòng thêm API key của Gemini hoặc OpenAI để sử dụng tính năng này" : "Bắt đầu phiên brainstorm ý tưởng với AI"}
+                        className="w-full flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed">
+                        <SparklesIcon className="h-5 w-5 mr-2" />
                         Brainstorm Ý tưởng
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
                     </button>
                     <div className="flex space-x-3">
                         <button 

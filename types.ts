@@ -61,3 +61,16 @@ export interface ChannelInfo {
     subscriberCount: string;
     videoCount: string;
 }
+
+export interface SavedSession {
+  id: string; // Will be the channel ID
+  savedAt: string; // ISO date string
+  channelInfo: ChannelInfo;
+  videos: Video[];
+  nextPageToken?: string;
+}
+
+export interface ChatMessage {
+  role: 'user' | 'model';
+  content: string;
+}
