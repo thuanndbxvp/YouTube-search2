@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { StoredConfig } from '../types';
+import { validateSingleApiKey as validateYoutubeKey } from '../services/youtubeService';
+import { validateSingleApiKey as validateGeminiKey } from '../services/geminiService';
+import { validateSingleApiKey as validateOpenAIKey } from '../services/openaiService';
+import { CheckCircleIcon, XCircleIcon, TrashIcon, SpinnerIcon } from './Icons';
 
 interface ApiModalProps {
   isOpen: boolean;
@@ -11,15 +15,88 @@ interface ApiModalProps {
 const GEMINI_MODELS = ['gemini-2.5-pro', 'gemini-2.5-flash'];
 const OPENAI_MODELS = ['gpt-5', 'gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'];
 
-const ApiTextarea = ({ value, onChange, placeholder }: { value: string, onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void, placeholder?: string }) => (
-    <textarea
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      rows={3}
-      className="w-full bg-[#1a1b26] border border-[#414868] rounded-md px-3 py-2 text-sm text-white focus:ring-1 focus:ring-indigo-500 outline-none"
-    />
-);
+interface KeyWithStatus {
+  id: number;
+  value: string;
+  status: 'idle' | 'validating' | 'valid' | 'invalid';
+}
+
+const ApiKeyManager: React.FC<{
+    keys: KeyWithStatus[];
+    setKeys: React.Dispatch<React.SetStateAction<KeyWithStatus[]>>;
+    validateFn: (key: string) => Promise<boolean>;
+    placeholder: string;
+}> = ({ keys, setKeys, validateFn, placeholder }) => {
+    
+    const handleAddKey = () => {
+        setKeys(prev => [...prev, { id: Date.now(), value: '', status: 'idle' }]);
+    };
+    
+    const handleDeleteKey = (id: number) => {
+        setKeys(prev => prev.filter(k => k.id !== id));
+    };
+
+    const handleUpdateKey = (id: number, value: string) => {
+        setKeys(prev => prev.map(k => k.id === id ? { ...k, value, status: 'idle' } : k));
+    };
+
+    const handleValidateKey = async (id: number) => {
+        const keyToValidate = keys.find(k => k.id === id);
+        if (!keyToValidate) return;
+
+        setKeys(prev => prev.map(k => k.id === id ? { ...k, status: 'validating' } : k));
+        
+        const isValid = await validateFn(keyToValidate.value);
+
+        setKeys(prev => prev.map(k => k.id === id ? { ...k, status: isValid ? 'valid' : 'invalid' } : k));
+    };
+
+    return (
+        <div className="space-y-2">
+            {keys.map((keyItem) => (
+                <div key={keyItem.id} className="flex items-center space-x-2">
+                    <div className="relative flex-grow">
+                        <input
+                            type="text"
+                            value={keyItem.value}
+                            onChange={(e) => handleUpdateKey(keyItem.id, e.target.value)}
+                            placeholder={placeholder}
+                            className="w-full bg-[#1a1b26] border border-[#414868] rounded-md px-3 py-2 text-sm text-white focus:ring-1 focus:ring-indigo-500 outline-none pr-10"
+                        />
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                            {keyItem.status === 'validating' && <SpinnerIcon className="w-5 h-5 text-gray-400 animate-spin" />}
+                            {keyItem.status === 'valid' && <CheckCircleIcon className="w-5 h-5 text-green-400" />}
+                            {keyItem.status === 'invalid' && <XCircleIcon className="w-5 h-5 text-red-400" />}
+                        </div>
+                    </div>
+                     <button 
+                        type="button"
+                        onClick={() => handleValidateKey(keyItem.id)} 
+                        disabled={!keyItem.value || keyItem.status === 'validating'}
+                        className="text-xs bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-3 rounded-md transition-colors disabled:opacity-50"
+                    >
+                        Kiểm tra
+                    </button>
+                    <button 
+                        type="button"
+                        onClick={() => handleDeleteKey(keyItem.id)} 
+                        className="p-2 bg-red-800 hover:bg-red-900 text-white rounded-md transition-colors"
+                    >
+                        <TrashIcon className="w-4 h-4" />
+                    </button>
+                </div>
+            ))}
+            <button 
+                type="button"
+                onClick={handleAddKey} 
+                className="text-sm text-indigo-300 hover:text-indigo-200 font-semibold"
+            >
+                + Thêm Key
+            </button>
+        </div>
+    );
+};
+
 
 const HowToGetApiKey = () => (
     <details className="text-sm mt-2 cursor-pointer">
@@ -49,50 +126,64 @@ const HowToGetApiKey = () => (
     </details>
 );
 
+const parseKeysString = (keysString: string): KeyWithStatus[] => 
+    keysString.split(/[\n,]+/).filter(Boolean).map(value => ({
+        id: Date.now() + Math.random(),
+        value,
+        status: 'idle',
+    }));
+
+const joinKeys = (keys: KeyWithStatus[]): string =>
+    keys.map(k => k.value.trim()).filter(Boolean).join('\n');
 
 export const ApiModal: React.FC<ApiModalProps> = ({ isOpen, onClose, config, setConfig }) => {
-  const [localConfig, setLocalConfig] = useState<StoredConfig>(config);
+  const [youtubeKeys, setYoutubeKeys] = useState<KeyWithStatus[]>([]);
+  const [geminiKeys, setGeminiKeys] = useState<KeyWithStatus[]>([]);
+  const [openaiKeys, setOpenaiKeys] = useState<KeyWithStatus[]>([]);
+  
+  const [geminiModel, setGeminiModel] = useState(config.gemini.model);
+  const [openaiModel, setOpenaiModel] = useState(config.openai.model);
+
 
   useEffect(() => {
     if (isOpen) {
-      setLocalConfig(JSON.parse(JSON.stringify(config)));
+      setYoutubeKeys(parseKeysString(config.youtube.key));
+      setGeminiKeys(parseKeysString(config.gemini.key));
+      setOpenaiKeys(parseKeysString(config.openai.key));
+      setGeminiModel(config.gemini.model);
+      setOpenaiModel(config.openai.model);
     }
   }, [config, isOpen]);
 
   if (!isOpen) return null;
 
   const handleSaveAndClose = () => {
-    setConfig(localConfig);
+    setConfig({
+        youtube: { key: joinKeys(youtubeKeys) },
+        gemini: { key: joinKeys(geminiKeys), model: geminiModel },
+        openai: { key: joinKeys(openaiKeys), model: openaiModel },
+    });
     onClose();
   };
   
-  const handleConfigChange = <S extends keyof StoredConfig, K extends keyof StoredConfig[S]>(service: S, key: K, value: StoredConfig[S][K]) => {
-      setLocalConfig(prev => ({
-          ...prev,
-          [service]: {
-              ...prev[service],
-              [key]: value
-          }
-      }));
-  };
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 transition-opacity duration-300" onClick={onClose}>
-      <div className="bg-[#24283b] rounded-lg shadow-2xl p-6 w-full max-w-lg transform transition-all duration-300" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-[#24283b] rounded-lg shadow-2xl p-6 w-full max-w-2xl transform transition-all duration-300" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-white">Quản lý API Keys</h2>
            <button onClick={onClose} className="text-gray-400 hover:text-white">&times;</button>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-3">
             {/* YouTube Section */}
             <div>
               <h3 className="text-lg font-semibold text-red-400 mb-2">YouTube Data API</h3>
-              <label className="block text-sm font-medium text-gray-300 mb-1">API Keys (Bắt buộc)</label>
-              <ApiTextarea 
-                value={localConfig.youtube.key} 
-                onChange={e => handleConfigChange('youtube', 'key', e.target.value)}
-                placeholder="Dán một hoặc nhiều API Key, mỗi key một dòng."
+              <label className="block text-sm font-medium text-gray-300 mb-2">API Keys (Bắt buộc)</label>
+              <ApiKeyManager 
+                keys={youtubeKeys}
+                setKeys={setYoutubeKeys}
+                validateFn={validateYoutubeKey}
+                placeholder="Dán API Key YouTube vào đây"
               />
               <HowToGetApiKey />
             </div>
@@ -100,16 +191,17 @@ export const ApiModal: React.FC<ApiModalProps> = ({ isOpen, onClose, config, set
             {/* Gemini Section */}
             <div>
               <h3 className="text-lg font-semibold text-purple-400 mb-2">Google Gemini</h3>
-              <label className="block text-sm font-medium text-gray-300 mb-1">API Keys</label>
-              <ApiTextarea 
-                value={localConfig.gemini.key} 
-                onChange={e => handleConfigChange('gemini', 'key', e.target.value)}
-                placeholder="Dán một hoặc nhiều API Key, mỗi key một dòng."
+              <label className="block text-sm font-medium text-gray-300 mb-2">API Keys</label>
+               <ApiKeyManager 
+                keys={geminiKeys}
+                setKeys={setGeminiKeys}
+                validateFn={validateGeminiKey}
+                placeholder="Dán API Key Gemini vào đây"
               />
                <label className="block text-sm font-medium text-gray-300 mt-3 mb-1">Model</label>
                 <select 
-                    value={localConfig.gemini.model} 
-                    onChange={e => handleConfigChange('gemini', 'model', e.target.value)} 
+                    value={geminiModel} 
+                    onChange={e => setGeminiModel(e.target.value)} 
                     className="w-full bg-[#1a1b26] border border-[#414868] rounded-md px-3 py-2 text-sm text-white focus:ring-1 focus:ring-indigo-500 outline-none"
                 >
                     {GEMINI_MODELS.map(m => <option key={m} value={m}>{m.charAt(0).toUpperCase() + m.slice(1).replace(/-/g, ' ')}</option>)}
@@ -119,16 +211,17 @@ export const ApiModal: React.FC<ApiModalProps> = ({ isOpen, onClose, config, set
             {/* OpenAI Section */}
             <div>
               <h3 className="text-lg font-semibold text-cyan-400 mb-2">OpenAI</h3>
-                <label className="block text-sm font-medium text-gray-300 mb-1">API Keys</label>
-                <ApiTextarea 
-                    value={localConfig.openai.key} 
-                    onChange={e => handleConfigChange('openai', 'key', e.target.value)}
-                    placeholder="Dán một hoặc nhiều API Key, mỗi key một dòng."
+                <label className="block text-sm font-medium text-gray-300 mb-2">API Keys</label>
+                <ApiKeyManager 
+                    keys={openaiKeys}
+                    setKeys={setOpenaiKeys}
+                    validateFn={validateOpenAIKey}
+                    placeholder="Dán API Key OpenAI vào đây"
                 />
                 <label className="block text-sm font-medium text-gray-300 mt-3 mb-1">Model</label>
                 <select 
-                    value={localConfig.openai.model} 
-                    onChange={e => handleConfigChange('openai', 'model', e.target.value)} 
+                    value={openaiModel} 
+                    onChange={e => setOpenaiModel(e.target.value)} 
                     className="w-full bg-[#1a1b26] border border-[#414868] rounded-md px-3 py-2 text-sm text-white focus:ring-1 focus:ring-indigo-500 outline-none"
                 >
                     <option value="gpt-5">GPT-5 (Mới nhất)</option>

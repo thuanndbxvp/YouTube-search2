@@ -185,7 +185,7 @@ export const fetchVideosPage = async (
     return executeWithKeyRotation(apiKeys, (key) => fetchVideosPageInternal(playlistId, key, pageToken));
 };
 
-export const validateApiKey = async (apiKeys: string): Promise<boolean> => {
+export const validateApiKeys = async (apiKeys: string): Promise<boolean> => {
     const keys = apiKeys.split(/[\n,]+/).map(k => k.trim()).filter(Boolean);
     if (keys.length === 0) return false;
 
@@ -200,4 +200,17 @@ export const validateApiKey = async (apiKeys: string): Promise<boolean> => {
         }
     }
     return false; // No valid key found
+};
+
+export const validateSingleApiKey = async (apiKey: string): Promise<boolean> => {
+    if (!apiKey) return false;
+    // Use a known valid channel ID for a lightweight check
+    const validationUrl = `${API_BASE_URL}/channels?part=snippet&id=UC_x5XG1OV2P6uZZ5FSM9Ttw&key=${apiKey}`;
+    try {
+        const response = await fetch(validationUrl);
+        return response.ok;
+    } catch (error) {
+        console.error(`YouTube key validation failed for ...${apiKey.slice(-4)}:`, error);
+        return false;
+    }
 };

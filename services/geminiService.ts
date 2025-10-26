@@ -24,7 +24,7 @@ async function executeWithKeyRotation<T>(
     throw new Error(`Tất cả API key của Gemini đều không hợp lệ. Lỗi cuối cùng: ${lastError.message}`);
 }
 
-export const validateApiKey = async (apiKeys: string): Promise<boolean> => {
+export const validateApiKeys = async (apiKeys: string): Promise<boolean> => {
   const keys = apiKeys.split(/[\n,]+/).map(k => k.trim()).filter(Boolean);
   if (keys.length === 0) return false;
   
@@ -42,6 +42,23 @@ export const validateApiKey = async (apiKeys: string): Promise<boolean> => {
     }
   }
   return false;
+};
+
+export const validateSingleApiKey = async (apiKey: string): Promise<boolean> => {
+    if (!apiKey) return false;
+    try {
+      const ai = new GoogleGenAI({ apiKey: apiKey });
+      // A simple, low-cost call to check API key validity
+      const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: [{ parts: [{text: 'test'}]}],
+      });
+      // If it doesn't throw, the key is valid.
+      return !!response;
+    } catch (error) {
+      console.error(`Gemini key validation failed for ...${apiKey.slice(-4)}:`, error);
+      return false;
+    }
 };
 
 

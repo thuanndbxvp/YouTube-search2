@@ -24,7 +24,7 @@ async function executeWithKeyRotation<T>(
     throw new Error(`Tất cả API key của OpenAI đều không hợp lệ. Lỗi cuối cùng: ${lastError.message}`);
 }
 
-export const validateApiKey = async (apiKeys: string): Promise<boolean> => {
+export const validateApiKeys = async (apiKeys: string): Promise<boolean> => {
   const keys = apiKeys.split(/[\n,]+/).map(k => k.trim()).filter(Boolean);
   if (keys.length === 0) return false;
 
@@ -40,6 +40,20 @@ export const validateApiKey = async (apiKeys: string): Promise<boolean> => {
       }
   }
   return false;
+};
+
+export const validateSingleApiKey = async (apiKey: string): Promise<boolean> => {
+    if (!apiKey) return false;
+    try {
+      // A lightweight request to check if the key is valid
+      const response = await fetch(`${OPENAI_API_URL}/models`, {
+        headers: { 'Authorization': `Bearer ${apiKey}` },
+      });
+      return response.ok;
+    } catch (error) {
+      console.error(`OpenAI key validation failed for ...${apiKey.slice(-4)}:`, error);
+      return false;
+    }
 };
 
 export const analyzeVideoContentWithOpenAI = async (
