@@ -10,8 +10,14 @@ export interface StoredConfig {
     key: string;
     model: string;
   };
+  googleClientId: string;
 }
 
+export interface UserProfile {
+    name: string;
+    email: string;
+    picture: string;
+}
 
 export type AiProvider = 'gemini' | 'openai';
 

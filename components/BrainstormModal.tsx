@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChannelInfo, StoredConfig, AiProvider, ChatMessage, Video } from '../types';
 import { generateGeminiChatResponse } from '../services/geminiService';
 import { generateOpenAIChatResponse } from '../services/openaiService';
-import { PaperAirplaneIcon, UsersIcon, ExpandIcon, ShrinkIcon } from './Icons';
+import { PaperAirplaneIcon, UsersIcon, ExpandIcon, ShrinkIcon, ClipboardCopyIcon, DownloadIcon } from './Icons';
 import { formatDate, formatNumber, parseISO8601Duration } from '../utils/formatters';
 
 interface BrainstormModalProps {
@@ -46,6 +46,7 @@ export const BrainstormModal: React.FC<BrainstormModalProps> = ({ isOpen, onClos
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -64,6 +65,36 @@ export const BrainstormModal: React.FC<BrainstormModalProps> = ({ isOpen, onClos
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [messages]);
+
+  const formatChatForExport = (): string => {
+    return messages.map(msg => {
+        const prefix = msg.role === 'user' ? 'Bạn' : 'AI';
+        return `${prefix}:\n${msg.content}`;
+    }).join('\n\n----------------------------------------\n\n');
+  };
+
+  const handleCopyChat = () => {
+    const chatContent = formatChatForExport();
+    navigator.clipboard.writeText(chatContent).then(() => {
+        setCopyStatus('copied');
+        setTimeout(() => setCopyStatus('idle'), 2000);
+    });
+  };
+
+  const handleDownloadChat = () => {
+    const chatContent = formatChatForExport();
+    const blob = new Blob([chatContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const safeChannelName = channelInfo.title.replace(/[^\w\s]/gi, '').replace(/\s+/g, '_');
+    link.download = `AI_Brainstorm_${safeChannelName}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
 
   const handleAudienceAnalysis = async () => {
     if (isAnalyzing || isLoading) {
@@ -215,15 +246,38 @@ Bạn chỉ cần sao chép và dán một trong các câu hỏi trên hoặc đ
         <div className="p-4 border-b border-gray-700">
           <div className="flex justify-between items-center">
              <h2 className="text-xl font-bold text-white">Brainstorm & Phân tích với AI</h2>
-             <div className="flex items-center space-x-2">
-                <button 
-                    onClick={() => setIsFullScreen(!isFullScreen)} 
-                    className="text-gray-400 hover:text-white" 
-                    title={isFullScreen ? "Thu nhỏ" : "Phóng to"}
-                >
-                    {isFullScreen ? <ShrinkIcon className="w-5 h-5" /> : <ExpandIcon className="w-5 h-5" />}
-                </button>
-                <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
+             <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                    <button 
+                        onClick={handleCopyChat}
+                        className="text-gray-400 hover:text-white relative"
+                        title="Sao chép cuộc trò chuyện"
+                    >
+                        <ClipboardCopyIcon className="w-5 h-5" />
+                         {copyStatus === 'copied' && (
+                            <span className="absolute -top-6 left-1/2 -translate-x-1/2 bg-green-600 text-white text-xs px-2 py-0.5 rounded-md">
+                                Đã chép!
+                            </span>
+                        )}
+                    </button>
+                    <button 
+                        onClick={handleDownloadChat}
+                        className="text-gray-400 hover:text-white"
+                        title="Tải về cuộc trò chuyện (.txt)"
+                    >
+                        <DownloadIcon className="w-5 h-5" />
+                    </button>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button 
+                      onClick={() => setIsFullScreen(!isFullScreen)} 
+                      className="text-gray-400 hover:text-white" 
+                      title={isFullScreen ? "Thu nhỏ" : "Phóng to"}
+                  >
+                      {isFullScreen ? <ShrinkIcon className="w-5 h-5" /> : <ExpandIcon className="w-5 h-5" />}
+                  </button>
+                  <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
+                </div>
              </div>
           </div>
           <p className="text-sm text-gray-400">Kênh đang phân tích: {channelInfo.title}</p>
