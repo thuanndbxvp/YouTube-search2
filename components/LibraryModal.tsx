@@ -2,7 +2,10 @@
 
 import React, { useRef } from 'react';
 import { SavedSession, Theme } from '../types';
-import { TrashIcon, DownloadIcon, UploadIcon } from './Icons';
+import { TrashIcon, DownloadIcon, UploadIcon, TableCellsIcon } from './Icons';
+import { parseISO8601Duration, formatDate as formatDateForExcel } from '../utils/formatters';
+
+declare const XLSX: any;
 
 interface LibraryModalProps {
   isOpen: boolean;
@@ -76,6 +79,38 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
     };
     reader.readAsText(file);
   };
+  
+  const handleExportAllToExcel = () => {
+    if (sessions.length === 0) return;
+
+    const workbook = XLSX.utils.book_new();
+
+    sessions.forEach(session => {
+      // Sanitize sheet name for Excel (max 31 chars, no special chars)
+      const safeSheetName = session.channelInfo.title.replace(/[\\/*?:"<>|]/g, '').substring(0, 31);
+      
+      const videoData = session.videos.map(video => ({
+        'Tiêu đề': video.snippet.title,
+        'Mô tả': video.snippet.description,
+        'Ngày đăng': formatDateForExcel(video.snippet.publishedAt),
+        'Lượt xem': parseInt(video.statistics.viewCount, 10),
+        'Lượt thích': parseInt(video.statistics.likeCount, 10),
+        'Thời lượng': parseISO8601Duration(video.contentDetails.duration),
+        'URL': `https://www.youtube.com/watch?v=${video.id}`
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(videoData);
+      worksheet['!cols'] = [
+          { wch: 70 }, { wch: 100 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 45 }
+      ];
+
+      XLSX.utils.book_append_sheet(workbook, worksheet, safeSheetName);
+    });
+    
+    const date = new Date().toISOString().split('T')[0];
+    const fileName = `youtube_analyzer_all_channels_data_${date}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 transition-opacity duration-300" onClick={onClose}>
@@ -144,7 +179,15 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
               className="flex items-center justify-center bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 text-sm disabled:opacity-50"
             >
               <DownloadIcon className="w-4 h-4 mr-2" />
-              Xuất tất cả
+              Xuất JSON
+            </button>
+             <button
+              onClick={handleExportAllToExcel}
+              disabled={sessions.length === 0}
+              className="flex items-center justify-center bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 text-sm disabled:opacity-50"
+            >
+              <TableCellsIcon className="w-4 h-4 mr-2" />
+              Xuất Excel
             </button>
           </div>
            <button onClick={onClose} className="py-2 px-6 rounded-lg bg-gray-600 hover:bg-gray-700 text-white font-semibold transition-colors">Đóng</button>
