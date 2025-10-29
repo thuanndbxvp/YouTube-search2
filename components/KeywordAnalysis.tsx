@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Video, ChannelInfo } from '../types';
+import { Video, ChannelInfo, Theme } from '../types';
 import { DownloadIcon, InformationCircleIcon } from './Icons';
 import { formatDate, parseISO8601Duration } from '../utils/formatters';
 import { ChannelStatsModal } from './ChannelStatsModal';
@@ -12,9 +12,10 @@ declare const XLSX: any;
 interface KeywordAnalysisProps {
   videos: Video[];
   channelInfo: ChannelInfo | null;
+  theme: Theme;
 }
 
-export const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({ videos, channelInfo }) => {
+export const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({ videos, channelInfo, theme }) => {
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
   const [isHashtagModalOpen, setIsHashtagModalOpen] = useState(false);
 
@@ -101,8 +102,9 @@ export const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({ videos, channe
             isOpen={isHashtagModalOpen}
             onClose={() => setIsHashtagModalOpen(false)}
             videos={videos}
+            theme={theme}
         />
-        <h2 className="text-xl font-bold text-indigo-300 mb-4 flex items-center">
+        <h2 className={`text-xl font-bold text-${theme}-300 mb-4 flex items-center`}>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
                 <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />

@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { Video } from '../types';
+import { Video, Theme } from '../types';
 import { EyeIcon, LikeIcon, PlayIcon, SortAscIcon, SortDescIcon, ClockIcon } from './Icons';
 import { parseISO8601Duration, formatNumber, formatDate } from '../utils/formatters';
 
 interface VideoTableProps {
   videos: Video[];
+  theme: Theme;
 }
 
 type SortKey = 'publishedAt' | 'viewCount' | 'likeCount' | 'duration';
@@ -37,7 +38,7 @@ const SortableHeader: React.FC<{
   );
 };
 
-export const VideoTable: React.FC<VideoTableProps> = ({ videos }) => {
+export const VideoTable: React.FC<VideoTableProps> = ({ videos, theme }) => {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'publishedAt', direction: 'desc' });
 
   const sortedVideos = useMemo(() => {
@@ -109,7 +110,7 @@ export const VideoTable: React.FC<VideoTableProps> = ({ videos }) => {
           {sortedVideos.map((video, index) => (
             <tr key={video.id} className="bg-[#24283b] hover:bg-[#2d303e]">
               <td className="p-4 text-sm text-gray-300 align-top">{index + 1}</td>
-              <td className="p-4 text-sm text-indigo-200 font-bold align-top">
+              <td className={`p-4 text-sm text-${theme}-200 font-bold align-top`}>
                 {video.snippet.title}
               </td>
               <td className="p-4 text-xs text-gray-400 align-top">

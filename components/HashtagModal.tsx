@@ -1,14 +1,15 @@
 import React, { useMemo, useState } from 'react';
-import { Video } from '../types';
+import { Video, Theme } from '../types';
 import { ClipboardCopyIcon } from './Icons';
 
 interface HashtagModalProps {
   isOpen: boolean;
   onClose: () => void;
   videos: Video[];
+  theme: Theme;
 }
 
-export const HashtagModal: React.FC<HashtagModalProps> = ({ isOpen, onClose, videos }) => {
+export const HashtagModal: React.FC<HashtagModalProps> = ({ isOpen, onClose, videos, theme }) => {
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
 
   const hashtagCounts = useMemo(() => {
@@ -53,7 +54,7 @@ export const HashtagModal: React.FC<HashtagModalProps> = ({ isOpen, onClose, vid
           {hashtagCounts.length > 0 ? (
             hashtagCounts.map(([hashtag, count]) => (
               <div key={hashtag} className="flex justify-between items-center bg-[#2d303e] p-2 rounded-md">
-                <span className="text-indigo-300 text-sm font-medium">{hashtag}</span>
+                <span className={`text-${theme}-300 text-sm font-medium`}>{hashtag}</span>
                 <span className="bg-gray-700 text-gray-200 text-xs font-bold px-2 py-0.5 rounded-full">{count}</span>
               </div>
             ))
@@ -63,7 +64,7 @@ export const HashtagModal: React.FC<HashtagModalProps> = ({ isOpen, onClose, vid
         </div>
 
         <div className="mt-6 flex justify-end items-center space-x-2">
-          <button onClick={handleCopy} className="py-2 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold transition-colors flex items-center justify-center">
+          <button onClick={handleCopy} className={`py-2 px-4 rounded-lg bg-${theme}-600 hover:bg-${theme}-700 text-white font-semibold transition-colors flex items-center justify-center`}>
             <ClipboardCopyIcon className="w-5 h-5 mr-2"/>
             {copyStatus === 'copied' ? 'Đã sao chép!' : 'Sao chép tất cả'}
           </button>

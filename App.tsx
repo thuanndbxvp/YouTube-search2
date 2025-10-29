@@ -1,30 +1,28 @@
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Header } from './components/Header';
 import { ApiModal } from './components/ApiModal';
 import { LibraryModal } from './components/LibraryModal';
 import { ChannelInputForm } from './components/ChannelInputForm';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { Video, ChannelInfo, StoredConfig, SavedSession, ChatMessage, UserProfile } from './types';
+import { Video, ChannelInfo, StoredConfig, SavedSession, ChatMessage } from './types';
 import { getChannelInfoByUrl, fetchVideosPage } from './services/youtubeService';
 import { VideoTable } from './components/VideoTable';
 import { KeywordAnalysis } from './components/KeywordAnalysis';
 import { AnalysisTools } from './components/AnalysisTools';
 import { calculateKeywordCounts, getTopKeywords } from './utils/keywords';
-import * as GoogleAuth from './services/googleAuthService';
 import { ChannelHeader } from './components/ChannelHeader';
 
 const initialConfig: StoredConfig = {
+  theme: 'blue',
   youtube: { key: '' },
   gemini: { key: '', model: 'gemini-2.5-pro' },
   openai: { key: '', model: 'gpt-5' },
-  googleClientId: '',
 };
 
 export default function App() {
   const [appConfig, setAppConfig] = useLocalStorage<StoredConfig>('yt-analyzer-config-v2', initialConfig);
-  const [localSessions, setLocalSessions] = useLocalStorage<SavedSession[]>('yt-analyzer-sessions-v1', []);
-  const [savedSessions, setSavedSessions] = useState<SavedSession[]>([]);
+  const [savedSessions, setSavedSessions] = useLocalStorage<SavedSession[]>('yt-analyzer-sessions-v1', []);
   
   const [isApiModalOpen, setIsApiModalOpen] = useState(false);
   const [isLibraryModalOpen, setIsLibraryModalOpen] = useState(false);
@@ -37,73 +35,6 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'saving' | 'error'>('idle');
   const [brainstormMessages, setBrainstormMessages] = useState<ChatMessage[]>([]);
-
-  // Auth state
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [isGapiReady, setIsGapiReady] = useState(false);
-  const [isGisReady, setIsGisReady] = useState(false);
-  const isAuthReady = useMemo(() => isGapiReady && isGisReady, [isGapiReady, isGisReady]);
-
-  // Effect to initialize Google APIs
-  useEffect(() => {
-    const handleGapiLoaded = () => GoogleAuth.initGapiClient(() => setIsGapiReady(true));
-    const handleGisLoaded = () => {
-      if (appConfig.googleClientId) {
-        GoogleAuth.initGisClient(appConfig.googleClientId, () => setIsGisReady(true));
-      }
-    };
-
-    window.addEventListener('gapi-loaded', handleGapiLoaded);
-    window.addEventListener('gis-loaded', handleGisLoaded);
-    if ((window as any).gapi?.client) handleGapiLoaded();
-    if ((window as any).google?.accounts) handleGisLoaded();
-
-    return () => {
-      window.removeEventListener('gapi-loaded', handleGapiLoaded);
-      window.removeEventListener('gis-loaded', handleGisLoaded);
-    };
-  }, [appConfig.googleClientId]);
-
-  // Effect to set initial sessions from localStorage
-  useEffect(() => {
-    if (!user) {
-      setSavedSessions(localSessions);
-    }
-  }, [user, localSessions]);
-
-  // Handler for Sign In
-  const handleSignIn = useCallback(async () => {
-      if (!appConfig.googleClientId) {
-          setError("Vui lòng đặt ID khách của Google trong cài đặt API.");
-          setIsApiModalOpen(true);
-          return;
-      }
-      if (!isAuthReady) {
-          setError("Xác thực của Google chưa sẵn sàng. Vui lòng đợi một lát và thử lại.");
-          return;
-      }
-      try {
-          await GoogleAuth.signIn();
-          const profile = await GoogleAuth.getUserProfile();
-          setUser(profile);
-          const sessions = await GoogleAuth.loadSessions();
-          setSavedSessions(sessions);
-      } catch (error) {
-          console.error(error);
-          setError("Không thể đăng nhập bằng Google. Vui lòng kiểm tra Client ID và cấu hình của bạn.");
-      }
-  }, [isAuthReady, appConfig.googleClientId]);
-
-  // Handler for Sign Out
-  const handleSignOut = useCallback(() => {
-      GoogleAuth.signOut();
-      setUser(null);
-      setSavedSessions(localSessions); // Revert to local sessions
-      setVideos([]);
-      setChannelInfo(null);
-      setBrainstormMessages([]);
-      setError(null);
-  }, [localSessions]);
 
   const createInitialBrainstormMessage = useCallback((chInfo: ChannelInfo, keywords: string[]): ChatMessage[] => {
       if (!chInfo || keywords.length === 0) return [];
@@ -191,11 +122,6 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
     }
 
     try {
-        if (user) { // Logged in: save to Google Drive
-            await GoogleAuth.saveSessions(newSessionsList);
-        } else { // Logged out: save to Local Storage
-            setLocalSessions(newSessionsList);
-        }
         setSavedSessions(newSessionsList);
         setSaveStatus('saved');
         setTimeout(() => setSaveStatus('idle'), 2000);
@@ -231,11 +157,6 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
     if (window.confirm('Bạn có chắc chắn muốn xóa phiên này không?')) {
         const newSessionsList = savedSessions.filter(s => s.id !== sessionId);
         try {
-            if (user) { // Logged in: update Google Drive
-                await GoogleAuth.saveSessions(newSessionsList);
-            } else { // Logged out: update Local Storage
-                setLocalSessions(newSessionsList);
-            }
             setSavedSessions(newSessionsList);
         } catch(e) {
             setError(e instanceof Error ? e.message : "Không thể xóa phiên.");
@@ -267,11 +188,6 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
     const newSessionsList = Array.from(mergedSessionsMap.values());
 
     try {
-      if (user) {
-        await GoogleAuth.saveSessions(newSessionsList);
-      } else {
-        setLocalSessions(newSessionsList);
-      }
       setSavedSessions(newSessionsList);
       setIsLibraryModalOpen(false);
       alert(`Đã nhập và hợp nhất thành công ${importedSessions.length} phiên. Tổng số phiên hiện tại: ${newSessionsList.length}.`);
@@ -289,12 +205,7 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
         onClose={() => setIsApiModalOpen(false)}
         config={appConfig}
         setConfig={setAppConfig}
-        user={user}
-        onSignIn={handleSignIn}
-        onSignOut={() => {
-            handleSignOut();
-            setIsApiModalOpen(false);
-        }}
+        theme={appConfig.theme}
       />
       <LibraryModal
         isOpen={isLibraryModalOpen}
@@ -303,6 +214,7 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
         onLoad={handleLoadSession}
         onDelete={handleDeleteSession}
         onImport={handleImportSessions}
+        theme={appConfig.theme}
       />
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Header 
@@ -311,12 +223,11 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
             onSaveSession={handleSaveSession}
             isSessionSavable={videos.length > 0 && !isLoading}
             saveStatus={saveStatus}
-            user={user}
-            onSignIn={handleSignIn}
-            onSignOut={handleSignOut}
+            theme={appConfig.theme}
+            setAppConfig={setAppConfig}
         />
         <main className="mt-12">
-          <ChannelInputForm onSubmit={handleFetchVideos} isLoading={isLoading} />
+          <ChannelInputForm onSubmit={handleFetchVideos} isLoading={isLoading} theme={appConfig.theme} />
           {error && <div className="mt-4 text-center text-red-400 bg-red-900/50 p-3 rounded-lg">{error}</div>}
           
           {videos.length > 0 && channelInfo && !isLoading && (
@@ -324,7 +235,7 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
                 <ChannelHeader channelInfo={channelInfo} />
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-6 mb-6">
                     <div className="lg:col-span-2">
-                        <KeywordAnalysis videos={videos} channelInfo={channelInfo} />
+                        <KeywordAnalysis videos={videos} channelInfo={channelInfo} theme={appConfig.theme} />
                     </div>
                     <div>
                         <AnalysisTools 
@@ -333,16 +244,17 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
                           appConfig={appConfig} 
                           brainstormMessages={brainstormMessages}
                           setBrainstormMessages={setBrainstormMessages}
+                          theme={appConfig.theme}
                         />
                     </div>
                 </div>
-                <VideoTable videos={videos} />
+                <VideoTable videos={videos} theme={appConfig.theme} />
                  {nextPageToken && (
                     <div className="text-center mt-8">
                       <button
                         onClick={handleLoadMore}
                         disabled={isLoadingMore}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg transition-colors duration-200 disabled:opacity-50"
+                        className={`bg-${appConfig.theme}-600 hover:bg-${appConfig.theme}-700 text-white font-bold py-3 px-8 rounded-lg transition-colors duration-200 disabled:opacity-50`}
                       >
                         {isLoadingMore ? 'Đang tải...' : 'Tải thêm 50 video'}
                       </button>

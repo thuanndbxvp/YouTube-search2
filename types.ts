@@ -1,4 +1,7 @@
+export type Theme = 'blue' | 'green' | 'orange' | 'red' | 'purple';
+
 export interface StoredConfig {
+  theme: Theme;
   youtube: {
     key: string;
   };
@@ -10,13 +13,6 @@ export interface StoredConfig {
     key: string;
     model: string;
   };
-  googleClientId: string;
-}
-
-export interface UserProfile {
-    name: string;
-    email: string;
-    picture: string;
 }
 
 export type AiProvider = 'gemini' | 'openai';
@@ -79,4 +75,10 @@ export interface SavedSession {
 export interface ChatMessage {
   role: 'user' | 'model';
   content: string;
+}
+// FIX: Add UserProfile interface to fix import error in googleAuthService.ts
+export interface UserProfile {
+  name: string;
+  email: string;
+  picture: string;
 }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChannelInfo, StoredConfig, ChatMessage, Video } from '../types';
+import { ChannelInfo, StoredConfig, ChatMessage, Video, Theme } from '../types';
 import { BrainstormModal } from './BrainstormModal';
 import { SparklesIcon } from './Icons';
 
@@ -9,9 +9,10 @@ interface AnalysisToolsProps {
     appConfig: StoredConfig;
     brainstormMessages: ChatMessage[];
     setBrainstormMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
+    theme: Theme;
 }
 
-export const AnalysisTools: React.FC<AnalysisToolsProps> = ({ videos, channelInfo, appConfig, brainstormMessages, setBrainstormMessages }) => {
+export const AnalysisTools: React.FC<AnalysisToolsProps> = ({ videos, channelInfo, appConfig, brainstormMessages, setBrainstormMessages, theme }) => {
     const [isBrainstormModalOpen, setIsBrainstormModalOpen] = useState(false);
 
     const isBrainstormDisabled = (!appConfig.gemini.key || appConfig.gemini.key.trim() === '') && 
@@ -27,9 +28,10 @@ export const AnalysisTools: React.FC<AnalysisToolsProps> = ({ videos, channelInf
                 messages={brainstormMessages}
                 setMessages={setBrainstormMessages}
                 videos={videos}
+                theme={theme}
             />
             <div>
-                <h2 className="text-xl font-bold text-indigo-300 mb-2">
+                <h2 className={`text-xl font-bold text-${theme}-300 mb-2`}>
                     Công cụ Phân tích & Sáng tạo
                 </h2>
                 <p className="text-gray-400 mb-4 text-sm">
@@ -40,7 +42,7 @@ export const AnalysisTools: React.FC<AnalysisToolsProps> = ({ videos, channelInf
                         onClick={() => setIsBrainstormModalOpen(true)}
                         disabled={isBrainstormDisabled}
                         title={isBrainstormDisabled ? "Vui lòng thêm API key của Gemini hoặc OpenAI để sử dụng tính năng này" : "Brainstorm ý tưởng & Phân tích kênh với AI"}
-                        className="w-full flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed">
+                        className={`w-full flex items-center justify-center bg-${theme}-600 hover:bg-${theme}-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed`}>
                         <SparklesIcon className="h-5 w-5 mr-2" />
                         Brainstorm & Phân tích với AI
                     </button>

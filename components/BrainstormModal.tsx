@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChannelInfo, StoredConfig, AiProvider, ChatMessage, Video } from '../types';
+import { ChannelInfo, StoredConfig, AiProvider, ChatMessage, Video, Theme } from '../types';
 import { generateGeminiChatResponse } from '../services/geminiService';
 import { generateOpenAIChatResponse } from '../services/openaiService';
 import { PaperAirplaneIcon, UsersIcon, ExpandIcon, ShrinkIcon, ClipboardCopyIcon, DownloadIcon } from './Icons';
@@ -13,20 +13,22 @@ interface BrainstormModalProps {
   messages: ChatMessage[];
   setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
   videos: Video[];
+  theme: Theme;
 }
 
 const AiProviderSelector: React.FC<{
     selected: AiProvider;
     onSelect: (provider: AiProvider) => void;
     config: StoredConfig;
-}> = ({ selected, onSelect, config }) => {
+    theme: Theme;
+}> = ({ selected, onSelect, config, theme }) => {
     const hasGemini = !!config.gemini.key;
     const hasOpenAI = !!config.openai.key;
 
     const buttonClass = (provider: AiProvider) => 
         `px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
             selected === provider 
-            ? 'bg-indigo-600 text-white' 
+            ? `bg-${theme}-600 text-white` 
             : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
         }`;
 
@@ -40,7 +42,7 @@ const AiProviderSelector: React.FC<{
 
 const ANALYSIS_PROMPT_IDENTIFIER = "Với tư cách là một chuyên gia phân tích kênh YouTube";
 
-export const BrainstormModal: React.FC<BrainstormModalProps> = ({ isOpen, onClose, channelInfo, appConfig, messages, setMessages, videos }) => {
+export const BrainstormModal: React.FC<BrainstormModalProps> = ({ isOpen, onClose, channelInfo, appConfig, messages, setMessages, videos, theme }) => {
   const [selectedAi, setSelectedAi] = useState<AiProvider>('gemini');
   const [currentMessage, setCurrentMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -283,12 +285,12 @@ Bạn chỉ cần sao chép và dán một trong các câu hỏi trên hoặc đ
           <p className="text-sm text-gray-400">Kênh đang phân tích: {channelInfo.title}</p>
         </div>
 
-        <AiProviderSelector selected={selectedAi} onSelect={setSelectedAi} config={appConfig} />
+        <AiProviderSelector selected={selectedAi} onSelect={setSelectedAi} config={appConfig} theme={theme} />
 
         <div ref={chatContainerRef} className="flex-grow p-4 overflow-y-auto space-y-4">
             {messages.map((msg, index) => (
-                <div key={index} className={`flex ${!isFullScreen && msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`p-3 rounded-lg ${isFullScreen ? 'w-full' : 'max-w-lg'} ${msg.role === 'user' ? 'bg-indigo-700 text-white' : 'bg-gray-700 text-gray-200'}`}>
+                <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`p-3 rounded-lg ${isFullScreen ? 'w-full' : 'max-w-lg'} ${msg.role === 'user' ? `bg-${theme}-700 text-white` : 'bg-gray-700 text-gray-200'}`}>
                         <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                     </div>
                 </div>
@@ -297,9 +299,9 @@ Bạn chỉ cần sao chép và dán một trong các câu hỏi trên hoặc đ
                  <div className="flex justify-start">
                     <div className="max-w-lg p-3 rounded-lg bg-gray-700 text-gray-200">
                         <div className="flex items-center space-x-2">
-                           <div className="w-2 h-2 bg-indigo-300 rounded-full animate-pulse"></div>
-                           <div className="w-2 h-2 bg-indigo-300 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                           <div className="w-2 h-2 bg-indigo-300 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                           <div className={`w-2 h-2 bg-${theme}-300 rounded-full animate-pulse`}></div>
+                           <div className={`w-2 h-2 bg-${theme}-300 rounded-full animate-pulse`} style={{ animationDelay: '0.2s' }}></div>
+                           <div className={`w-2 h-2 bg-${theme}-300 rounded-full animate-pulse`} style={{ animationDelay: '0.4s' }}></div>
                         </div>
                     </div>
                 </div>
@@ -323,10 +325,10 @@ Bạn chỉ cần sao chép và dán một trong các câu hỏi trên hoặc đ
               value={currentMessage}
               onChange={(e) => setCurrentMessage(e.target.value)}
               placeholder="Nhập câu hỏi hoặc ý tưởng của bạn..."
-              className="w-full bg-[#1a1b26] border border-[#414868] rounded-lg px-4 py-2 text-sm text-white focus:ring-1 focus:ring-indigo-500 outline-none"
+              className={`w-full bg-[#1a1b26] border border-[#414868] rounded-lg px-4 py-2 text-sm text-white focus:ring-1 focus:ring-${theme}-500 outline-none`}
               disabled={isLoading}
             />
-            <button type="submit" disabled={isLoading || !currentMessage.trim()} className="bg-indigo-600 hover:bg-indigo-700 text-white p-2.5 rounded-lg disabled:opacity-50 transition-colors">
+            <button type="submit" disabled={isLoading || !currentMessage.trim()} className={`bg-${theme}-600 hover:bg-${theme}-700 text-white p-2.5 rounded-lg disabled:opacity-50 transition-colors`}>
               <PaperAirplaneIcon className="w-5 h-5" />
             </button>
           </form>

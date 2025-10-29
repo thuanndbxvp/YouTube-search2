@@ -1,6 +1,7 @@
 
+
 import React, { useRef } from 'react';
-import { SavedSession } from '../types';
+import { SavedSession, Theme } from '../types';
 import { TrashIcon, DownloadIcon, UploadIcon } from './Icons';
 
 interface LibraryModalProps {
@@ -10,6 +11,7 @@ interface LibraryModalProps {
   onLoad: (sessionId: string) => void;
   onDelete: (sessionId: string) => void;
   onImport: (sessions: SavedSession[]) => void;
+  theme: Theme;
 }
 
 const formatDate = (dateString: string): string => {
@@ -22,7 +24,7 @@ const formatDate = (dateString: string): string => {
     });
 };
 
-export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, sessions, onLoad, onDelete, onImport }) => {
+export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, sessions, onLoad, onDelete, onImport, theme }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
@@ -91,7 +93,7 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
               <div key={session.id} className="flex items-center bg-[#2d303e] p-3 rounded-lg">
                 <img src={session.channelInfo.thumbnail} alt={session.channelInfo.title} className="w-16 h-16 rounded-full mr-4" />
                 <div className="flex-grow">
-                    <h3 className="font-bold text-indigo-300">{session.channelInfo.title}</h3>
+                    <h3 className={`font-bold text-${theme}-300`}>{session.channelInfo.title}</h3>
                     <p className="text-xs text-gray-400 mt-1">
                         {session.videos.length} video đã tải | Lần cuối lưu: {formatDate(session.savedAt)}
                     </p>
@@ -99,7 +101,7 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
                 <div className="flex items-center space-x-2">
                     <button 
                         onClick={() => onLoad(session.id)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm py-2 px-4 rounded-md transition-colors"
+                        className={`bg-${theme}-600 hover:bg-${theme}-700 text-white font-semibold text-sm py-2 px-4 rounded-md transition-colors`}
                     >
                         Tải lại
                     </button>
