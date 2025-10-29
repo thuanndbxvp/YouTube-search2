@@ -96,8 +96,8 @@ export const VideoTable: React.FC<VideoTableProps> = ({ videos }) => {
         <thead className="bg-[#1a1b26] text-gray-400">
           <tr>
             <th className="p-4 text-sm font-semibold tracking-wide text-left w-12">#</th>
-            <th className="p-4 text-sm font-semibold tracking-wide text-left" style={{width: '25%'}}>TIÊU ĐỀ VIDEO</th>
-            <th className="p-4 text-sm font-semibold tracking-wide text-left" style={{width: '30%'}}>MÔ TẢ VIDEO</th>
+            <th className="p-4 text-sm font-semibold tracking-wide text-left" style={{width: '35%'}}>TIÊU ĐỀ VIDEO</th>
+            <th className="p-4 text-sm font-semibold tracking-wide text-left" style={{width: '20%'}}>MÔ TẢ VIDEO</th>
             <SortableHeader title="NGÀY ĐĂNG" sortKey="publishedAt" sortConfig={sortConfig} requestSort={requestSort} />
             <SortableHeader title="LƯỢT XEM" sortKey="viewCount" sortConfig={sortConfig} requestSort={requestSort} />
             <SortableHeader title="LƯỢT THÍCH" sortKey="likeCount" sortConfig={sortConfig} requestSort={requestSort} />
