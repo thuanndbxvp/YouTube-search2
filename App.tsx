@@ -166,7 +166,7 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
         onLoad={handleLoadSession}
         onDelete={handleDeleteSession}
       />
-      <div className="container mx-auto px-4 py-8">
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Header 
             onApiClick={() => setIsApiModalOpen(true)}
             onLibraryClick={() => setIsLibraryModalOpen(true)}
