@@ -233,8 +233,8 @@ Bạn chỉ cần sao chép và dán một trong các câu hỏi trên hoặc đ
 
         <div ref={chatContainerRef} className="flex-grow p-4 overflow-y-auto space-y-4">
             {messages.map((msg, index) => (
-                <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-lg p-3 rounded-lg ${msg.role === 'user' ? 'bg-indigo-700 text-white' : 'bg-gray-700 text-gray-200'}`}>
+                <div key={index} className={`flex ${!isFullScreen && msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`p-3 rounded-lg ${isFullScreen ? 'w-full' : 'max-w-lg'} ${msg.role === 'user' ? 'bg-indigo-700 text-white' : 'bg-gray-700 text-gray-200'}`}>
                         <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                     </div>
                 </div>
