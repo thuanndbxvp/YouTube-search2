@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChannelInfo, StoredConfig, AiProvider, ChatMessage, Video } from '../types';
 import { generateGeminiChatResponse } from '../services/geminiService';
 import { generateOpenAIChatResponse } from '../services/openaiService';
-import { PaperAirplaneIcon, UsersIcon } from './Icons';
+import { PaperAirplaneIcon, UsersIcon, ExpandIcon, ShrinkIcon } from './Icons';
 import { formatDate, formatNumber, parseISO8601Duration } from '../utils/formatters';
 
 interface BrainstormModalProps {
@@ -45,6 +45,7 @@ export const BrainstormModal: React.FC<BrainstormModalProps> = ({ isOpen, onClos
   const [currentMessage, setCurrentMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -202,11 +203,28 @@ Bạn chỉ cần sao chép và dán một trong các câu hỏi trên hoặc đ
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 transition-opacity" onClick={onClose}>
-      <div className="bg-[#24283b] rounded-lg shadow-2xl w-full max-w-2xl flex flex-col" style={{ height: '80vh' }} onClick={(e) => e.stopPropagation()}>
+      <div 
+        className={`bg-[#24283b] flex flex-col transition-all duration-300 ease-in-out ${
+          isFullScreen 
+          ? 'w-screen h-screen rounded-none' 
+          : 'rounded-lg shadow-2xl w-full max-w-2xl'
+        }`}
+        style={!isFullScreen ? { height: '80vh' } : {}}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="p-4 border-b border-gray-700">
           <div className="flex justify-between items-center">
              <h2 className="text-xl font-bold text-white">Brainstorm & Phân tích với AI</h2>
-             <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
+             <div className="flex items-center space-x-2">
+                <button 
+                    onClick={() => setIsFullScreen(!isFullScreen)} 
+                    className="text-gray-400 hover:text-white" 
+                    title={isFullScreen ? "Thu nhỏ" : "Phóng to"}
+                >
+                    {isFullScreen ? <ShrinkIcon className="w-5 h-5" /> : <ExpandIcon className="w-5 h-5" />}
+                </button>
+                <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
+             </div>
           </div>
           <p className="text-sm text-gray-400">Kênh đang phân tích: {channelInfo.title}</p>
         </div>
