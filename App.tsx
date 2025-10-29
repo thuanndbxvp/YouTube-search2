@@ -226,7 +226,7 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
             theme={appConfig.theme}
             setAppConfig={setAppConfig}
         />
-        <main className="mt-12">
+        <main className="mt-8">
           <ChannelInputForm onSubmit={handleFetchVideos} isLoading={isLoading} theme={appConfig.theme} />
           {error && <div className="mt-4 text-center text-red-400 bg-red-900/50 p-3 rounded-lg">{error}</div>}
           
