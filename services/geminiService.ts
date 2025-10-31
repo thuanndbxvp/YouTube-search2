@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { ChatMessage } from '../types';
 
@@ -111,6 +112,59 @@ export const generateGeminiChatResponse = async (
           throw new Error(`Lỗi từ Gemini API: ${error.message}`);
       }
       throw new Error("Đã xảy ra lỗi không xác định khi chat với Gemini.");
+    }
+  });
+};
+
+export const performCompetitiveAnalysis = async (
+  apiKeys: string,
+  model: string,
+  csvData: string,
+  analysisInstructions: string
+): Promise<string> => {
+  return executeWithKeyRotation(apiKeys, async (apiKey) => {
+    if (!apiKey) {
+      throw new Error("Gemini API key is not provided.");
+    }
+    try {
+      const ai = new GoogleGenAI({ apiKey });
+
+      const fullPrompt = `
+        Với vai trò là một chuyên gia phân tích dữ liệu YouTube, hãy thực hiện nhiệm vụ phân tích cạnh tranh dựa trên các hướng dẫn và dữ liệu được cung cấp.
+
+        **Định nghĩa nhiệm vụ (JSON):**
+        \`\`\`json
+        ${analysisInstructions}
+        \`\`\`
+
+        ---
+
+        **Dữ liệu Video (CSV):**
+        Dưới đây là dữ liệu video từ nhiều kênh khác nhau. Các cột bao gồm: Channel Name, Video Title, Publish Date, View Count, Likes, Duration (ISO 8601).
+
+        \`\`\`csv
+        ${csvData}
+        \`\`\`
+
+        ---
+
+        **Yêu cầu:**
+        Hãy thực hiện phân tích theo định nghĩa nhiệm vụ trong file JSON và trả về kết quả.
+        Tập trung vào việc tạo ra phần **"text_summary"** trước tiên, định dạng bằng Markdown rõ ràng, dễ đọc, tuân thủ văn phong và cấu trúc đã chỉ định. Sử dụng tiếng Việt cho toàn bộ báo cáo phân tích.
+      `;
+
+      const response = await ai.models.generateContent({
+        model,
+        contents: [{ parts: [{ text: fullPrompt }] }],
+      });
+
+      return response.text;
+    } catch (error) {
+      console.error("Error performing competitive analysis with Gemini:", error);
+      if (error instanceof Error) {
+        throw new Error(`Lỗi từ Gemini API: ${error.message}`);
+      }
+      throw new Error("Đã xảy ra lỗi không xác định khi thực hiện phân tích cạnh tranh.");
     }
   });
 };

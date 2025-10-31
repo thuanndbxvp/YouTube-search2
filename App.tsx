@@ -12,6 +12,7 @@ import { KeywordAnalysis } from './components/KeywordAnalysis';
 import { AnalysisTools } from './components/AnalysisTools';
 import { calculateKeywordCounts, getTopKeywords } from './utils/keywords';
 import { ChannelHeader } from './components/ChannelHeader';
+import { CompetitiveAnalysisModal } from './components/CompetitiveAnalysisModal';
 
 const initialConfig: StoredConfig = {
   theme: 'blue',
@@ -26,6 +27,7 @@ export default function App() {
   
   const [isApiModalOpen, setIsApiModalOpen] = useState(false);
   const [isLibraryModalOpen, setIsLibraryModalOpen] = useState(false);
+  const [isCompetitiveAnalysisModalOpen, setIsCompetitiveAnalysisModalOpen] = useState(false);
 
   const [videos, setVideos] = useState<Video[]>([]);
   const [channelInfo, setChannelInfo] = useState<ChannelInfo | null>(null);
@@ -216,6 +218,13 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
         onImport={handleImportSessions}
         theme={appConfig.theme}
       />
+      <CompetitiveAnalysisModal
+        isOpen={isCompetitiveAnalysisModalOpen}
+        onClose={() => setIsCompetitiveAnalysisModalOpen(false)}
+        sessions={savedSessions}
+        appConfig={appConfig}
+        theme={appConfig.theme}
+      />
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Header 
             onApiClick={() => setIsApiModalOpen(true)}
@@ -225,6 +234,8 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
             saveStatus={saveStatus}
             theme={appConfig.theme}
             setAppConfig={setAppConfig}
+            onCompetitiveAnalysisClick={() => setIsCompetitiveAnalysisModalOpen(true)}
+            isCompetitiveAnalysisAvailable={savedSessions.length >= 2}
         />
         <main className="mt-8">
           <ChannelInputForm onSubmit={handleFetchVideos} isLoading={isLoading} theme={appConfig.theme} />

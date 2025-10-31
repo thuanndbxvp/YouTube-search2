@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { BookmarkIcon, LibraryIcon, KeyIcon, YouTubeIcon } from './Icons';
+import { BookmarkIcon, LibraryIcon, KeyIcon, YouTubeIcon, ChartBarIcon } from './Icons';
 import { StoredConfig, Theme } from '../types';
 
 interface HeaderProps {
@@ -11,6 +11,8 @@ interface HeaderProps {
     saveStatus: 'idle' | 'saved' | 'saving' | 'error';
     theme: Theme;
     setAppConfig: React.Dispatch<React.SetStateAction<StoredConfig>>;
+    onCompetitiveAnalysisClick: () => void;
+    isCompetitiveAnalysisAvailable: boolean;
 }
 
 const themes: Theme[] = ['blue', 'green', 'orange', 'red', 'purple'];
@@ -29,7 +31,7 @@ const PaintBrushIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 
-export const Header: React.FC<HeaderProps> = ({ onApiClick, onLibraryClick, onSaveSession, isSessionSavable, saveStatus, theme, setAppConfig }) => {
+export const Header: React.FC<HeaderProps> = ({ onApiClick, onLibraryClick, onSaveSession, isSessionSavable, saveStatus, theme, setAppConfig, onCompetitiveAnalysisClick, isCompetitiveAnalysisAvailable }) => {
     const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false);
     const themeDropdownRef = useRef<HTMLDivElement>(null);
     
@@ -109,6 +111,15 @@ export const Header: React.FC<HeaderProps> = ({ onApiClick, onLibraryClick, onSa
                 <button onClick={onLibraryClick} className="flex items-center justify-center bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-semibold py-1.5 px-3 rounded-md transition-colors duration-200">
                     <LibraryIcon className="w-4 h-4 mr-1.5" />
                     Thư viện
+                </button>
+                <button
+                    onClick={onCompetitiveAnalysisClick}
+                    disabled={!isCompetitiveAnalysisAvailable}
+                    title={!isCompetitiveAnalysisAvailable ? "Cần ít nhất 2 kênh đã lưu để phân tích đối thủ" : "Phân tích đối thủ"}
+                    className="flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-1.5 px-3 rounded-md transition-colors duration-200 disabled:opacity-50"
+                >
+                    <ChartBarIcon className="w-4 h-4 mr-1.5" />
+                    Đối thủ
                 </button>
                 <button onClick={onApiClick} className="flex items-center justify-center bg-gray-700 hover:bg-gray-800 text-white text-sm font-semibold py-1.5 px-3 rounded-md transition-colors duration-200">
                     <KeyIcon className="w-4 h-4 mr-1.5" />
