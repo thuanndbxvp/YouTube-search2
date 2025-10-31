@@ -101,6 +101,7 @@ export const Header: React.FC<HeaderProps> = ({ onApiClick, onLibraryClick, onSa
                  <button 
                     onClick={onSaveSession}
                     disabled={!isSessionSavable || saveStatus === 'saving' || saveStatus === 'saved'}
+                    title={!isSessionSavable ? "Phân tích một kênh trước khi lưu" : "Lưu phiên làm việc hiện tại"}
                     className={`flex items-center justify-center text-white text-sm font-semibold py-1.5 px-3 rounded-md transition-colors duration-200 disabled:opacity-50
                         ${saveStatus === 'saved' ? 'bg-green-600' : `bg-${theme}-600 hover:bg-${theme}-700`}`
                     }
@@ -108,7 +109,10 @@ export const Header: React.FC<HeaderProps> = ({ onApiClick, onLibraryClick, onSa
                     <BookmarkIcon className="w-4 h-4 mr-1.5" />
                     {saveButtonText[saveStatus]}
                 </button>
-                <button onClick={onLibraryClick} className="flex items-center justify-center bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-semibold py-1.5 px-3 rounded-md transition-colors duration-200">
+                <button 
+                    onClick={onLibraryClick}
+                    title="Mở thư viện các phiên đã lưu"
+                    className="flex items-center justify-center bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-semibold py-1.5 px-3 rounded-md transition-colors duration-200">
                     <LibraryIcon className="w-4 h-4 mr-1.5" />
                     Thư viện
                 </button>
@@ -121,7 +125,10 @@ export const Header: React.FC<HeaderProps> = ({ onApiClick, onLibraryClick, onSa
                     <ChartBarIcon className="w-4 h-4 mr-1.5" />
                     Đối thủ
                 </button>
-                <button onClick={onApiClick} className="flex items-center justify-center bg-gray-700 hover:bg-gray-800 text-white text-sm font-semibold py-1.5 px-3 rounded-md transition-colors duration-200">
+                <button 
+                    onClick={onApiClick} 
+                    title="Quản lý API Keys"
+                    className="flex items-center justify-center bg-gray-700 hover:bg-gray-800 text-white text-sm font-semibold py-1.5 px-3 rounded-md transition-colors duration-200">
                     <KeyIcon className="w-4 h-4 mr-1.5" />
                     API
                 </button>
