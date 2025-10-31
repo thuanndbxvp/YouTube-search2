@@ -1,11 +1,12 @@
 
+
 import React, { useState, useCallback } from 'react';
 import { Header } from './components/Header';
 import { ApiModal } from './components/ApiModal';
 import { LibraryModal } from './components/LibraryModal';
 import { ChannelInputForm } from './components/ChannelInputForm';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { Video, ChannelInfo, StoredConfig, SavedSession, ChatMessage } from './types';
+import { Video, ChannelInfo, StoredConfig, SavedSession, ChatMessage, Theme } from './types';
 import { getChannelInfoByUrl, fetchVideosPage } from './services/youtubeService';
 import { VideoTable } from './components/VideoTable';
 import { KeywordAnalysis } from './components/KeywordAnalysis';
@@ -13,6 +14,7 @@ import { AnalysisTools } from './components/AnalysisTools';
 import { calculateKeywordCounts, getTopKeywords } from './utils/keywords';
 import { ChannelHeader } from './components/ChannelHeader';
 import { CompetitiveAnalysisModal } from './components/CompetitiveAnalysisModal';
+import { TrashIcon, SpinnerIcon } from './components/Icons';
 
 const initialConfig: StoredConfig = {
   theme: 'blue',
@@ -20,6 +22,70 @@ const initialConfig: StoredConfig = {
   gemini: { key: '', model: 'gemini-2.5-pro' },
   openai: { key: '', model: 'gpt-5' },
 };
+
+interface ChannelQueueListProps {
+  queue: string[];
+  onAnalyze: (url: string) => void;
+  onRemove: (url: string) => void;
+  currentlyAnalyzingUrl: string | null;
+  theme: Theme;
+}
+
+const ChannelQueueList: React.FC<ChannelQueueListProps> = ({
+  queue,
+  onAnalyze,
+  onRemove,
+  currentlyAnalyzingUrl,
+  theme,
+}) => {
+  if (queue.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="max-w-3xl mx-auto mt-6">
+      <h3 className="text-lg font-semibold text-gray-300 mb-3">Danh sách chờ phân tích ({queue.length})</h3>
+      <div className="bg-[#24283b] p-4 rounded-lg space-y-3 max-h-60 overflow-y-auto">
+        {queue.map((url, index) => {
+          const isAnalyzing = currentlyAnalyzingUrl === url;
+          const isAnotherAnalyzing = currentlyAnalyzingUrl !== null && !isAnalyzing;
+          return (
+            <div key={`${url}-${index}`} className="flex items-center justify-between bg-[#2d303e] p-3 rounded-md">
+              <span className="text-sm text-gray-400 truncate flex-1 pr-4">{url}</span>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => onAnalyze(url)}
+                  disabled={isAnalyzing || isAnotherAnalyzing}
+                  className={`flex items-center justify-center text-sm font-semibold py-2 px-4 rounded-md transition-colors duration-200 disabled:opacity-50
+                    bg-${theme}-600 hover:bg-${theme}-700 text-white`
+                  }
+                >
+                  {isAnalyzing ? (
+                    <>
+                      <SpinnerIcon className="w-4 h-4 mr-2 animate-spin" />
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    'Phân tích'
+                  )}
+                </button>
+                <button
+                  onClick={() => onRemove(url)}
+                  disabled={isAnalyzing}
+                  className="bg-red-800 hover:bg-red-900 text-white p-2.5 rounded-md transition-colors disabled:opacity-50"
+                  title="Xóa khỏi danh sách"
+                >
+                  <TrashIcon className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 
 export default function App() {
   const [appConfig, setAppConfig] = useLocalStorage<StoredConfig>('yt-analyzer-config-v2', initialConfig);
@@ -37,6 +103,9 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'saving' | 'error'>('idle');
   const [brainstormMessages, setBrainstormMessages] = useState<ChatMessage[]>([]);
+  
+  const [channelQueue, setChannelQueue] = useState<string[]>([]);
+  const [currentlyAnalyzingUrl, setCurrentlyAnalyzingUrl] = useState<string | null>(null);
 
   const createInitialBrainstormMessage = useCallback((chInfo: ChannelInfo, keywords: string[]): ChatMessage[] => {
       if (!chInfo || keywords.length === 0) return [];
@@ -75,14 +144,43 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
       const keywordCounts = calculateKeywordCounts(videoData.videos);
       const topKeywords = getTopKeywords(keywordCounts, 10);
       setBrainstormMessages(createInitialBrainstormMessage(info, topKeywords));
+      
+      // On success, remove from queue
+      setChannelQueue(prev => prev.filter(url => url !== channelUrl));
 
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi không xác định.');
     } finally {
       setIsLoading(false);
+      setCurrentlyAnalyzingUrl(null);
     }
   }, [appConfig, createInitialBrainstormMessage]);
+
+  const handleQueueSubmit = (urlsText: string) => {
+    const urls = urlsText
+      .split('\n')
+      .map(url => url.trim())
+      .filter(url => url.length > 0 && (url.includes('youtube.com/') || url.includes('youtu.be/')));
+    
+    if (urls.length > 0) {
+      setChannelQueue(prev => {
+        const newUrls = urls.filter(url => !prev.includes(url));
+        return [...prev, ...newUrls];
+      });
+    }
+  };
+
+  const handleRemoveFromQueue = (urlToRemove: string) => {
+    setChannelQueue(prev => prev.filter(url => url !== urlToRemove));
+  };
+
+  const handleAnalyzeFromQueue = async (url: string) => {
+    if (currentlyAnalyzingUrl) return;
+    setCurrentlyAnalyzingUrl(url);
+    await handleFetchVideos(url);
+  };
+
 
   const handleLoadMore = useCallback(async () => {
     const youtubeApiKey = appConfig.youtube.key;
@@ -238,10 +336,19 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
             isCompetitiveAnalysisAvailable={savedSessions.length >= 2}
         />
         <main className="mt-8">
-          <ChannelInputForm onSubmit={handleFetchVideos} isLoading={isLoading} theme={appConfig.theme} />
+          <ChannelInputForm onSubmit={handleQueueSubmit} isLoading={!!currentlyAnalyzingUrl} theme={appConfig.theme} />
+          
+          <ChannelQueueList
+            queue={channelQueue}
+            onAnalyze={handleAnalyzeFromQueue}
+            onRemove={handleRemoveFromQueue}
+            currentlyAnalyzingUrl={currentlyAnalyzingUrl}
+            theme={appConfig.theme}
+          />
+          
           {error && <div className="mt-4 text-center text-red-400 bg-red-900/50 p-3 rounded-lg">{error}</div>}
           
-          {videos.length > 0 && channelInfo && !isLoading && (
+          {videos.length > 0 && channelInfo && (
             <div className="mt-8 p-6 bg-[#24283b] rounded-lg">
                 <ChannelHeader channelInfo={channelInfo} />
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-6 mb-6">
