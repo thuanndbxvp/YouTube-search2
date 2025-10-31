@@ -62,9 +62,11 @@ export const Header: React.FC<HeaderProps> = ({ onApiClick, onLibraryClick, onSa
     return (
         <header className="flex flex-col items-center text-center py-2">
             <div>
-                <h1 className={`flex items-center justify-center text-3xl md:text-4xl font-bold text-${theme}-300`}>
-                    <YouTubeIcon className="w-10 h-10 md:w-12 md:h-12 mr-3" />
-                    Trình phân tích kênh YouTube
+                <h1 className={`text-3xl md:text-4xl font-bold`}>
+                    <a href="/" className={`flex items-center justify-center text-${theme}-300 hover:text-${theme}-200 transition-colors duration-200`}>
+                        <YouTubeIcon className="w-10 h-10 md:w-12 md:h-12 mr-3" />
+                        Trình phân tích kênh YouTube
+                    </a>
                 </h1>
                 <p className="text-gray-400 mt-1">
                     Nhận thông tin chi tiết và tóm tắt do AI tạo ra cho các video gần đây nhất.
