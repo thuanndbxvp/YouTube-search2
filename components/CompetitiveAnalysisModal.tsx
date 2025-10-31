@@ -54,7 +54,7 @@ const analysisInstructions = `{
       "3. Phân tích Nội dung & Tiêu đề (Content & Title Analysis)",
       "4. Phân tích Thời gian & Thời lượng (Time & Duration Analysis)",
       "5. Các insight chính (Key Insights)",
-      "6. Đề xuất Chiến lược (Strategic Recommendations)"
+      "6. Đề xuất Chiến lược (Xây dựng Kênh Mới): Dựa trên tất cả phân tích, hãy đề xuất một kế hoạch chi tiết để xây dựng một kênh mới thành công trong cùng ngách này. Tập trung vào các yếu tố khác biệt, lịch trình đăng bài, định dạng video và chiến lược tăng trưởng ban đầu."
     ]
   },
   "output_format": {
@@ -116,12 +116,23 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
     };
 
     const handleDownload = () => {
-        const blob = new Blob([analysisResult], { type: 'text/markdown;charset=utf-8' });
+        const htmlHeader = "<html xmlns:o='urn:schemas-microsoft-com:office:office' "+
+            "xmlns:w='urn:schemas-microsoft-com:office:word' "+
+            "xmlns='http://www.w3.org/TR/REC-html40'>"+
+            "<head><meta charset='utf-8'><title>Báo cáo Phân tích</title></head><body>";
+        const htmlFooter = "</body></html>";
+        // Using a <pre> tag to maintain the markdown's whitespace and line breaks.
+        const htmlContent = htmlHeader + '<pre style="white-space: pre-wrap; font-family: sans-serif;">' + analysisResult + '</pre>' + htmlFooter;
+        
+        const blob = new Blob(['\ufeff', htmlContent], {
+            type: 'application/msword'
+        });
+        
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
         const date = new Date().toISOString().split('T')[0];
-        link.download = `Phan_tich_doi_thu_${date}.md`;
+        link.download = `Phan_tich_doi_thu_${date}.doc`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -157,7 +168,7 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
                             <ClipboardCopyIcon className="w-5 h-5"/>
                             {copyStatus === 'copied' && <span className="absolute -top-6 -right-2 bg-green-600 text-white text-xs px-2 py-0.5 rounded-md">Đã chép!</span>}
                         </button>
-                        <button onClick={handleDownload} className="p-1.5 bg-gray-600 hover:bg-gray-500 rounded-md text-white" title="Tải về (.md)">
+                        <button onClick={handleDownload} className="p-1.5 bg-gray-600 hover:bg-gray-500 rounded-md text-white" title="Tải về (.doc)">
                             <DownloadIcon className="w-5 h-5" />
                         </button>
                     </div>
