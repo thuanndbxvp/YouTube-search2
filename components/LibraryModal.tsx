@@ -117,7 +117,7 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
       <div className="bg-[#24283b] rounded-lg shadow-2xl p-6 w-full max-w-2xl flex flex-col" style={{ height: '70vh' }} onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-white">Thư viện phiên làm việc</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none" title="Đóng cửa sổ">&times;</button>
         </div>
 
         <div className="flex-grow overflow-y-auto pr-2 space-y-3">
@@ -137,12 +137,14 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
                     <button 
                         onClick={() => onLoad(session.id)}
                         className={`bg-${theme}-600 hover:bg-${theme}-700 text-white font-semibold text-sm py-2 px-4 rounded-md transition-colors`}
+                        title="Tải lại phiên làm việc này vào giao diện chính"
                     >
                         Tải lại
                     </button>
                     <button 
                         onClick={() => onDelete(session.id)}
                         className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-md transition-colors"
+                        title="Xóa vĩnh viễn phiên làm việc này"
                     >
                         <TrashIcon className="w-5 h-5" />
                     </button>
@@ -169,6 +171,7 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
             <button
               onClick={handleImportClick}
               className="flex items-center justify-center bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 text-sm"
+              title="Nhập các phiên làm việc từ một tệp .json"
             >
               <UploadIcon className="w-4 h-4 mr-2" />
               Nhập
@@ -177,6 +180,7 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
               onClick={handleExport}
               disabled={sessions.length === 0}
               className="flex items-center justify-center bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 text-sm disabled:opacity-50"
+              title="Xuất tất cả các phiên trong thư viện ra tệp .json"
             >
               <DownloadIcon className="w-4 h-4 mr-2" />
               Xuất JSON
@@ -185,12 +189,13 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
               onClick={handleExportAllToExcel}
               disabled={sessions.length === 0}
               className="flex items-center justify-center bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 text-sm disabled:opacity-50"
+              title="Xuất dữ liệu video của tất cả các kênh ra tệp .xlsx"
             >
               <TableCellsIcon className="w-4 h-4 mr-2" />
               Xuất Excel
             </button>
           </div>
-           <button onClick={onClose} className="py-2 px-6 rounded-lg bg-gray-600 hover:bg-gray-700 text-white font-semibold transition-colors">Đóng</button>
+           <button onClick={onClose} className="py-2 px-6 rounded-lg bg-gray-600 hover:bg-gray-700 text-white font-semibold transition-colors" title="Đóng cửa sổ thư viện">Đóng</button>
         </div>
       </div>
     </div>
