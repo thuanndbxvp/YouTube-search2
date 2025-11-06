@@ -7,6 +7,7 @@ import { useLocalStorage } from './hooks/useLocalStorage';
 import { Video, ChannelInfo, StoredConfig, SavedSession, ChatMessage, Theme, AiProvider } from './types';
 import { getChannelInfoByUrl, fetchVideosPage } from './services/youtubeService';
 import { generateTranscriptWithGemini } from './services/geminiService';
+import { generateTranscriptWithOpenAI } from './services/openaiService';
 import { VideoTable } from './components/VideoTable';
 import { KeywordAnalysis } from './components/KeywordAnalysis';
 import { AnalysisTools } from './components/AnalysisTools';
@@ -413,26 +414,49 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
   };
 
   const handleGetTranscript = async (video: Video) => {
-    setTranscriptModalState({ isOpen: true, video, transcript: '', isLoading: true, error: null });
+      setTranscriptModalState({ isOpen: true, video, transcript: '', isLoading: true, error: null });
 
-    if (appConfig.aiProvider !== 'gemini' || !appConfig.gemini.key) {
-        const errorMsg = 'Tính năng này yêu cầu sử dụng model Gemini. Vui lòng thêm Gemini API Key và chọn model Gemini trong phần cài đặt API.';
-        setTranscriptModalState(s => ({ ...s, isLoading: false, error: errorMsg }));
-        return;
-    }
+      const { aiProvider, gemini, openai } = appConfig;
+      let providerHasKey = false;
+      let providerName = '';
 
-    try {
-        const transcriptText = await generateTranscriptWithGemini(
-            appConfig.gemini.key,
-            appConfig.aiModel,
-            video.id
-        );
-        setTranscriptModalState(s => ({ ...s, isLoading: false, transcript: transcriptText }));
-    } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : 'Đã xảy ra lỗi không xác định.';
-        setTranscriptModalState(s => ({ ...s, isLoading: false, error: errorMsg }));
-    }
+      if (aiProvider === 'gemini') {
+          providerHasKey = !!gemini.key && gemini.key.trim() !== '';
+          providerName = 'Gemini';
+      } else { // 'openai'
+          providerHasKey = !!openai.key && openai.key.trim() !== '';
+          providerName = 'OpenAI';
+      }
+
+      if (!providerHasKey) {
+          const errorMsg = `Vui lòng thêm API Key cho ${providerName} và chọn model tương ứng trong phần cài đặt API để sử dụng tính năng này.`;
+          setTranscriptModalState(s => ({ ...s, isLoading: false, error: errorMsg }));
+          setIsApiModalOpen(true);
+          return;
+      }
+
+      try {
+          let transcriptText: string;
+          if (aiProvider === 'gemini') {
+              transcriptText = await generateTranscriptWithGemini(
+                  gemini.key,
+                  appConfig.aiModel,
+                  video.id
+              );
+          } else { // openai
+              transcriptText = await generateTranscriptWithOpenAI(
+                  openai.key,
+                  appConfig.aiModel,
+                  video.id
+              );
+          }
+          setTranscriptModalState(s => ({ ...s, isLoading: false, transcript: transcriptText }));
+      } catch (err) {
+          const errorMsg = err instanceof Error ? err.message : 'Đã xảy ra lỗi không xác định.';
+          setTranscriptModalState(s => ({ ...s, isLoading: false, error: errorMsg }));
+      }
   };
+
 
   return (
     <div className="min-h-screen bg-[#1a1b26] text-[#a9b1d6] font-sans">

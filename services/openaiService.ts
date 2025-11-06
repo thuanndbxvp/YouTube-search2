@@ -138,3 +138,48 @@ export const generateOpenAIChatResponse = async (
       }
   });
 };
+
+export const generateTranscriptWithOpenAI = async (
+  apiKeys: string,
+  model: string,
+  videoId: string
+): Promise<string> => {
+  return executeWithKeyRotation(apiKeys, async (apiKey) => {
+    if (!apiKey) {
+      throw new Error("OpenAI API key is not provided.");
+    }
+
+    const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    const prompt = `Lấy giúp tôi transcript đầy đủ cho video YouTube sau: ${videoUrl}. Nếu video có phụ đề hoặc chú thích, hãy trích xuất trực tiếp chúng.`;
+
+    try {
+      const response = await fetch(`${OPENAI_API_URL}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0, // Thấp để trích xuất thực tế
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errorMessage = data.error?.message || 'Unknown OpenAI API error';
+        throw new Error(`Lỗi từ OpenAI API: ${errorMessage}`);
+      }
+
+      return data.choices[0]?.message?.content?.trim() || 'Không thể lấy transcript.';
+    } catch (error) {
+      console.error("Error generating transcript with OpenAI:", error);
+      if (error instanceof Error) {
+          throw new Error(error.message);
+      }
+      throw new Error("Đã xảy ra lỗi không xác định khi tạo transcript với OpenAI.");
+    }
+  });
+};
