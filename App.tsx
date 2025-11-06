@@ -201,52 +201,67 @@ const getTranscriptInternal = async (videoId: string, apiKey: string): Promise<s
     const POLLING_INTERVAL_MS = 5000; // 5 seconds
     const MAX_ATTEMPTS = 12; // 12 * 5s = 60 seconds total timeout
 
-    const requestBody = JSON.stringify({
-        url: `https://www.youtube.com/watch?v=${videoId}`
+    // Step 1: Initiate transcription job
+    const initialResponse = await fetch(`https://transcriptapi.com/youtube`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({ video_id: videoId })
     });
 
+    if (!initialResponse.ok) {
+        let errorData;
+        try {
+            errorData = await initialResponse.json();
+        } catch (e) {
+            errorData = { message: `Yêu cầu API thất bại với mã trạng thái ${initialResponse.status}` };
+        }
+        throw new Error(errorData.message || `Yêu cầu API thất bại với mã trạng thái ${initialResponse.status}`);
+    }
+
+    const initialData = await initialResponse.json();
+    
+    // The API might return the transcript directly if cached
+    if (initialData.transcript) {
+        return initialData.transcript;
+    }
+
+    const jobId = initialData.id;
+    if (!jobId) {
+        throw new Error('API không trả về ID công việc để theo dõi.');
+    }
+
+    // Step 2: Poll for the result
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-        const response = await fetch(`https://transcriptapi.com/mcp`, {
-            method: 'POST',
+        const jobResponse = await fetch(`https://transcriptapi.com/youtube/${jobId}`, {
+            method: 'GET',
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${apiKey}`
-            },
-            body: requestBody
+            }
         });
 
-        if (!response.ok) {
-            let errorData;
-            try {
-                errorData = await response.json();
-            } catch (e) {
-                errorData = { message: `Yêu cầu API thất bại với mã trạng thái ${response.status}` };
+        if (jobResponse.ok) {
+            const jobData = await jobResponse.json();
+            if (jobData.status === 'COMPLETED') {
+                return jobData.transcript;
             }
-            throw new Error(errorData.message || `Yêu cầu API thất bại với mã trạng thái ${response.status}`);
+            if (jobData.status === 'FAILED') {
+                throw new Error('API không thể xử lý transcript cho video này.');
+            }
+            // Otherwise, status is likely 'QUEUED' or 'PROCESSING', so we continue polling.
+        } else {
+            console.error(`Kiểm tra trạng thái công việc thất bại với mã ${jobResponse.status}`);
         }
 
-        const data = await response.json();
-
-        // If transcript is available, return it.
-        if (data.transcript) {
-            return data.transcript;
-        }
-
-        // If the job failed explicitly, stop trying.
-        if (data.status === 'FAILED') {
-            throw new Error('API không thể xử lý transcript cho video này.');
-        }
-
-        // If it's the last attempt and still no transcript, break to throw timeout error.
         if (attempt === MAX_ATTEMPTS) {
             break;
         }
         
-        // Wait before the next attempt
         await new Promise(resolve => setTimeout(resolve, POLLING_INTERVAL_MS));
     }
     
-    // If loop finishes without returning, it means we timed out.
     throw new Error('Không thể lấy transcript sau 1 phút. Video có thể đang được xử lý hoặc không có transcript.');
 };
 
