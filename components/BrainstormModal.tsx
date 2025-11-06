@@ -16,50 +16,15 @@ interface BrainstormModalProps {
   theme: Theme;
 }
 
-const AiProviderSelector: React.FC<{
-    selected: AiProvider;
-    onSelect: (provider: AiProvider) => void;
-    config: StoredConfig;
-    theme: Theme;
-}> = ({ selected, onSelect, config, theme }) => {
-    const hasGemini = !!config.gemini.key;
-    const hasOpenAI = !!config.openai.key;
-
-    const buttonClass = (provider: AiProvider) => 
-        `px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
-            selected === provider 
-            ? `bg-${theme}-600 text-white` 
-            : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-        }`;
-
-    return (
-        <div className="flex justify-center space-x-2 mb-4">
-            {hasGemini && <button onClick={() => onSelect('gemini')} className={buttonClass('gemini')}>Gemini</button>}
-            {hasOpenAI && <button onClick={() => onSelect('openai')} className={buttonClass('openai')}>ChatGPT</button>}
-        </div>
-    )
-};
-
 const ANALYSIS_PROMPT_IDENTIFIER = "Với tư cách là một chuyên gia phân tích kênh YouTube";
 
 export const BrainstormModal: React.FC<BrainstormModalProps> = ({ isOpen, onClose, channelInfo, appConfig, messages, setMessages, videos, theme }) => {
-  const [selectedAi, setSelectedAi] = useState<AiProvider>('gemini');
   const [currentMessage, setCurrentMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
   const chatContainerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    // Set default AI provider based on available keys
-    if (appConfig.gemini.key) {
-        setSelectedAi('gemini');
-    } else if (appConfig.openai.key) {
-        setSelectedAi('openai');
-    }
-  }, [isOpen, appConfig.gemini.key, appConfig.openai.key]);
 
   useEffect(() => {
     // Auto-scroll to the bottom of the chat
@@ -162,10 +127,10 @@ Hãy trình bày phân tích của bạn một cách chi tiết và chuyên nghi
 
     try {
         let response: string;
-        if (selectedAi === 'gemini') {
-            response = await generateGeminiChatResponse(appConfig.gemini.key, appConfig.gemini.model, historyForApi);
+        if (appConfig.aiProvider === 'gemini') {
+            response = await generateGeminiChatResponse(appConfig.gemini.key, appConfig.aiModel, historyForApi);
         } else {
-            response = await generateOpenAIChatResponse(appConfig.openai.key, appConfig.openai.model, historyForApi);
+            response = await generateOpenAIChatResponse(appConfig.openai.key, appConfig.aiModel, historyForApi);
         }
         const finalAiMessage: ChatMessage = { role: 'model', content: response };
         
@@ -213,10 +178,10 @@ Bạn chỉ cần sao chép và dán một trong các câu hỏi trên hoặc đ
 
     try {
         let response: string;
-        if (selectedAi === 'gemini') {
-            response = await generateGeminiChatResponse(appConfig.gemini.key, appConfig.gemini.model, historyForApi);
+        if (appConfig.aiProvider === 'gemini') {
+            response = await generateGeminiChatResponse(appConfig.gemini.key, appConfig.aiModel, historyForApi);
         } else {
-            response = await generateOpenAIChatResponse(appConfig.openai.key, appConfig.openai.model, historyForApi);
+            response = await generateOpenAIChatResponse(appConfig.openai.key, appConfig.aiModel, historyForApi);
         }
         setMessages(prev => [...prev, { role: 'model', content: response }]);
     } catch (error) {
@@ -282,10 +247,8 @@ Bạn chỉ cần sao chép và dán một trong các câu hỏi trên hoặc đ
                 </div>
              </div>
           </div>
-          <p className="text-sm text-gray-400">Kênh đang phân tích: {channelInfo.title}</p>
+          <p className="text-sm text-gray-400">Kênh đang phân tích: {channelInfo.title} | Model: <span className="font-semibold">{appConfig.aiModel}</span></p>
         </div>
-
-        <AiProviderSelector selected={selectedAi} onSelect={setSelectedAi} config={appConfig} theme={theme} />
 
         <div ref={chatContainerRef} className="flex-grow p-4 overflow-y-auto space-y-4">
             {messages.map((msg, index) => (

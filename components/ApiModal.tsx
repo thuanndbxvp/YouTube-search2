@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StoredConfig, Theme } from '../types';
+import { StoredConfig, Theme, AiProvider } from '../types';
 import { validateSingleApiKey as validateYoutubeKey } from '../services/youtubeService';
 import { validateSingleApiKey as validateGeminiKey } from '../services/geminiService';
 import { validateSingleApiKey as validateOpenAIKey } from '../services/openaiService';
@@ -14,7 +14,14 @@ interface ApiModalProps {
 }
 
 const GEMINI_MODELS = ['gemini-2.5-pro', 'gemini-2.5-flash'];
-const OPENAI_MODELS = ['gpt-5', 'gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'];
+const OPENAI_MODELS_MAP = {
+    'gpt-5': 'GPT-5 (Mới nhất)',
+    'gpt-4o': 'GPT-4o',
+    'gpt-4-turbo': 'GPT-4 Turbo',
+    'gpt-3.5-turbo': 'GPT-3.5 Turbo',
+};
+const OPENAI_MODELS = Object.keys(OPENAI_MODELS_MAP);
+
 
 interface KeyWithStatus {
   id: number;
@@ -150,9 +157,7 @@ export const ApiModal: React.FC<ApiModalProps> = ({ isOpen, onClose, config, set
   const [openaiKeys, setOpenaiKeys] = useState<KeyWithStatus[]>([]);
   const [transcriptKeys, setTranscriptKeys] = useState<KeyWithStatus[]>([]);
   
-  const [geminiModel, setGeminiModel] = useState(config.gemini.model);
-  const [openaiModel, setOpenaiModel] = useState(config.openai.model);
-
+  const [activeAi, setActiveAi] = useState(`${config.aiProvider}:${config.aiModel}`);
 
   useEffect(() => {
     if (isOpen) {
@@ -160,20 +165,22 @@ export const ApiModal: React.FC<ApiModalProps> = ({ isOpen, onClose, config, set
       setGeminiKeys(parseKeysString(config.gemini.key));
       setOpenaiKeys(parseKeysString(config.openai.key));
       setTranscriptKeys(parseKeysString(config.transcript?.key || ''));
-      setGeminiModel(config.gemini.model);
-      setOpenaiModel(config.openai.model);
+      setActiveAi(`${config.aiProvider}:${config.aiModel}`);
     }
   }, [config, isOpen]);
 
   if (!isOpen) return null;
 
   const handleSaveAndClose = () => {
+    const [provider, model] = activeAi.split(':');
     setConfig(prev => ({
         ...prev,
         youtube: { key: joinKeys(youtubeKeys) },
-        gemini: { key: joinKeys(geminiKeys), model: geminiModel },
-        openai: { key: joinKeys(openaiKeys), model: openaiModel },
+        gemini: { key: joinKeys(geminiKeys) },
+        openai: { key: joinKeys(openaiKeys) },
         transcript: { key: joinKeys(transcriptKeys) },
+        aiProvider: provider as AiProvider,
+        aiModel: model,
     }));
     onClose();
   };
@@ -200,32 +207,41 @@ export const ApiModal: React.FC<ApiModalProps> = ({ isOpen, onClose, config, set
               />
               <HowToGetApiKey theme={theme} />
             </div>
+
+            {/* AI Model Selection */}
+            <div>
+              <h3 className="text-lg font-semibold text-cyan-400 mb-2">Mô hình AI</h3>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Mô hình AI hoạt động</label>
+              <p className="text-xs text-gray-400 mb-2">Chọn mô hình AI mặc định để sử dụng cho các tính năng như Brainstorm và Phân tích.</p>
+              <select
+                value={activeAi}
+                onChange={e => setActiveAi(e.target.value)}
+                className={`w-full bg-[#1a1b26] border border-[#414868] rounded-md px-3 py-2 text-sm text-white focus:ring-1 focus:ring-${theme}-500 outline-none`}
+              >
+                <optgroup label="Google Gemini">
+                  {GEMINI_MODELS.map(m => <option key={m} value={`gemini:${m}`}>{m.charAt(0).toUpperCase() + m.slice(1).replace(/-/g, ' ')}</option>)}
+                </optgroup>
+                <optgroup label="OpenAI">
+                  {OPENAI_MODELS.map(m => <option key={m} value={`openai:${m}`}>{OPENAI_MODELS_MAP[m as keyof typeof OPENAI_MODELS_MAP]}</option>)}
+                </optgroup>
+              </select>
+            </div>
             
             {/* Gemini Section */}
             <div>
-              <h3 className="text-lg font-semibold text-purple-400 mb-2">Google Gemini</h3>
-              <label className="block text-sm font-medium text-gray-300 mb-2">API Keys</label>
-               <ApiKeyManager 
+              <h3 className="text-lg font-semibold text-purple-400 mb-2">Google Gemini API Keys</h3>
+              <ApiKeyManager 
                 keys={geminiKeys}
                 setKeys={setGeminiKeys}
                 validateFn={validateGeminiKey}
                 placeholder="Dán API Key Gemini vào đây"
                 theme={theme}
               />
-               <label className="block text-sm font-medium text-gray-300 mt-3 mb-1">Model</label>
-                <select 
-                    value={geminiModel} 
-                    onChange={e => setGeminiModel(e.target.value)} 
-                    className={`w-full bg-[#1a1b26] border border-[#414868] rounded-md px-3 py-2 text-sm text-white focus:ring-1 focus:ring-${theme}-500 outline-none`}
-                >
-                    {GEMINI_MODELS.map(m => <option key={m} value={m}>{m.charAt(0).toUpperCase() + m.slice(1).replace(/-/g, ' ')}</option>)}
-                </select>
             </div>
 
             {/* OpenAI Section */}
             <div>
-              <h3 className="text-lg font-semibold text-cyan-400 mb-2">OpenAI</h3>
-                <label className="block text-sm font-medium text-gray-300 mb-2">API Keys</label>
+              <h3 className="text-lg font-semibold text-cyan-400 mb-2">OpenAI API Keys</h3>
                 <ApiKeyManager 
                     keys={openaiKeys}
                     setKeys={setOpenaiKeys}
@@ -233,17 +249,6 @@ export const ApiModal: React.FC<ApiModalProps> = ({ isOpen, onClose, config, set
                     placeholder="Dán API Key OpenAI vào đây"
                     theme={theme}
                 />
-                <label className="block text-sm font-medium text-gray-300 mt-3 mb-1">Model</label>
-                <select 
-                    value={openaiModel} 
-                    onChange={e => setOpenaiModel(e.target.value)} 
-                    className={`w-full bg-[#1a1b26] border border-[#414868] rounded-md px-3 py-2 text-sm text-white focus:ring-1 focus:ring-${theme}-500 outline-none`}
-                >
-                    <option value="gpt-5">GPT-5 (Mới nhất)</option>
-                    <option value="gpt-4o">GPT-4o</option>
-                    <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                </select>
             </div>
 
             {/* TranscriptAPI Section */}

@@ -2,16 +2,16 @@ export type Theme = 'blue' | 'green' | 'orange' | 'red' | 'purple';
 
 export interface StoredConfig {
   theme: Theme;
+  aiProvider: AiProvider;
+  aiModel: string;
   youtube: {
     key: string;
   };
   gemini: {
     key: string;
-    model: string;
   };
   openai: {
     key: string;
-    model: string;
   };
   transcript?: {
     key: string;

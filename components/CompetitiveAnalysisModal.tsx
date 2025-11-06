@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { SavedSession, StoredConfig, Theme } from '../types';
 import { performCompetitiveAnalysis } from '../services/geminiService';
@@ -79,6 +78,12 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
         setError(null);
         setAnalysisResult('');
 
+        if (appConfig.aiProvider !== 'gemini') {
+            setError('Tính năng này yêu cầu chọn một model của Gemini trong cài đặt API.');
+            setIsLoading(false);
+            return;
+        }
+
         try {
             const headers = ["Channel Name", "Video Title", "Publish Date", "View Count", "Likes", "Duration (ISO 8601)"];
             const rows = sessions.flatMap(session => 
@@ -95,7 +100,7 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
 
             const result = await performCompetitiveAnalysis(
                 appConfig.gemini.key,
-                appConfig.gemini.model,
+                appConfig.aiModel,
                 csvData,
                 analysisInstructions
             );

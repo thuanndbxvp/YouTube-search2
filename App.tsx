@@ -4,7 +4,7 @@ import { ApiModal } from './components/ApiModal';
 import { LibraryModal } from './components/LibraryModal';
 import { ChannelInputForm } from './components/ChannelInputForm';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { Video, ChannelInfo, StoredConfig, SavedSession, ChatMessage, Theme } from './types';
+import { Video, ChannelInfo, StoredConfig, SavedSession, ChatMessage, Theme, AiProvider } from './types';
 import { getChannelInfoByUrl, fetchVideosPage } from './services/youtubeService';
 import { VideoTable } from './components/VideoTable';
 import { KeywordAnalysis } from './components/KeywordAnalysis';
@@ -16,9 +16,11 @@ import { TrashIcon, SpinnerIcon, ClipboardCopyIcon } from './components/Icons';
 
 const initialConfig: StoredConfig = {
   theme: 'blue',
+  aiProvider: 'gemini',
+  aiModel: 'gemini-2.5-pro',
   youtube: { key: '' },
-  gemini: { key: '', model: 'gemini-2.5-pro' },
-  openai: { key: '', model: 'gpt-5' },
+  gemini: { key: '' },
+  openai: { key: '' },
   transcript: { key: '' },
 };
 
@@ -253,6 +255,29 @@ export default function App() {
       isLoading: false,
       error: null as string | null,
   });
+  
+  useEffect(() => {
+      const oldConfig = appConfig as any;
+      if(oldConfig && !oldConfig.aiProvider && (oldConfig.gemini?.model || oldConfig.openai?.model)) {
+          console.log("Migrating config to new AI model structure.");
+          setAppConfig(prev => {
+              const currentOldConfig = prev as any;
+              const provider: AiProvider = currentOldConfig.gemini?.model ? 'gemini' : 'openai';
+              const model = currentOldConfig.gemini?.model || currentOldConfig.openai?.model;
+
+              const newConfig: StoredConfig = {
+                  theme: currentOldConfig.theme,
+                  youtube: { key: currentOldConfig.youtube.key },
+                  gemini: { key: currentOldConfig.gemini.key },
+                  openai: { key: currentOldConfig.openai.key },
+                  transcript: { key: currentOldConfig.transcript?.key || '' },
+                  aiProvider: provider,
+                  aiModel: model || (provider === 'openai' ? 'gpt-4o' : 'gemini-2.5-pro'),
+              };
+              return newConfig;
+          });
+      }
+  }, []);
 
   const createInitialBrainstormMessage = useCallback((chInfo: ChannelInfo, keywords: string[]): ChatMessage[] => {
       if (!chInfo || keywords.length === 0) return [];
