@@ -25,6 +25,15 @@ const initialConfig: StoredConfig = {
   openai: { key: '' },
 };
 
+const initialTranscriptState = {
+    isOpen: false,
+    video: null as Video | null,
+    transcript: '',
+    isLoading: false,
+    error: null as string | null,
+    currentVideoId: null as string | null,
+};
+
 interface ChannelQueueListProps {
   queue: string[];
   onAnalyze: (url: string) => void;
@@ -192,13 +201,7 @@ export default function App() {
   const [channelQueue, setChannelQueue] = useState<string[]>([]);
   const [currentlyAnalyzingUrl, setCurrentlyAnalyzingUrl] = useState<string | null>(null);
 
-  const [transcriptModalState, setTranscriptModalState] = useState({
-      isOpen: false,
-      video: null as Video | null,
-      transcript: '',
-      isLoading: false,
-      error: null as string | null,
-  });
+  const [transcriptModalState, setTranscriptModalState] = useState(initialTranscriptState);
   
   useEffect(() => {
       const oldConfig = appConfig as any;
@@ -414,7 +417,14 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
   };
 
   const handleGetTranscript = async (video: Video) => {
-      setTranscriptModalState({ isOpen: true, video, transcript: '', isLoading: true, error: null });
+      setTranscriptModalState({
+          isOpen: true,
+          video,
+          transcript: '',
+          isLoading: true,
+          error: null,
+          currentVideoId: video.id,
+      });
 
       const { aiProvider, gemini, openai } = appConfig;
       let providerHasKey = false;
@@ -430,7 +440,7 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
 
       if (!providerHasKey) {
           const errorMsg = `Vui lòng thêm API Key cho ${providerName} và chọn model tương ứng trong phần cài đặt API để sử dụng tính năng này.`;
-          setTranscriptModalState(s => ({ ...s, isLoading: false, error: errorMsg }));
+          setTranscriptModalState(s => (s.currentVideoId === video.id ? { ...s, isLoading: false, error: errorMsg } : s));
           setIsApiModalOpen(true);
           return;
       }
@@ -450,10 +460,10 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
                   video.id
               );
           }
-          setTranscriptModalState(s => ({ ...s, isLoading: false, transcript: transcriptText }));
+          setTranscriptModalState(s => (s.currentVideoId === video.id ? { ...s, isLoading: false, transcript: transcriptText } : s));
       } catch (err) {
           const errorMsg = err instanceof Error ? err.message : 'Đã xảy ra lỗi không xác định.';
-          setTranscriptModalState(s => ({ ...s, isLoading: false, error: errorMsg }));
+          setTranscriptModalState(s => (s.currentVideoId === video.id ? { ...s, isLoading: false, error: errorMsg } : s));
       }
   };
 
@@ -485,7 +495,7 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
       />
       <TranscriptModal 
         isOpen={transcriptModalState.isOpen}
-        onClose={() => setTranscriptModalState(s => ({ ...s, isOpen: false }))}
+        onClose={() => setTranscriptModalState(initialTranscriptState)}
         video={transcriptModalState.video}
         transcript={transcriptModalState.transcript}
         isLoading={transcriptModalState.isLoading}
