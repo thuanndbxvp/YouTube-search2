@@ -123,7 +123,7 @@ const TranscriptModal: React.FC<TranscriptModalProps> = ({ isOpen, onClose, vide
             return (
                 <div className="text-center py-12">
                     <SpinnerIcon className="w-10 h-10 mx-auto animate-spin text-gray-400" />
-                    <p className="mt-4 text-gray-300">Đang lấy transcript...</p>
+                    <p className="mt-4 text-gray-300">Đang lấy transcript... Quá trình này có thể mất đến một phút.</p>
                 </div>
             );
         }
@@ -198,30 +198,58 @@ async function executeTranscriptKeyRotation<T>(
 }
 
 const getTranscriptInternal = async (videoId: string, apiKey: string): Promise<string> => {
-    const response = await fetch(`https://transcriptapi.com/mcp`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-            url: `https://www.youtube.com/watch?v=${videoId}`
-        })
+    const POLLING_INTERVAL_MS = 5000; // 5 seconds
+    const MAX_ATTEMPTS = 12; // 12 * 5s = 60 seconds total timeout
+
+    const requestBody = JSON.stringify({
+        url: `https://www.youtube.com/watch?v=${videoId}`
     });
 
-    if (!response.ok) {
-        let errorData;
-        try {
-            errorData = await response.json();
-        } catch (e) {
-            errorData = { message: `Yêu cầu API thất bại với mã trạng thái ${response.status}` };
-        }
-        throw new Error(errorData.message || `Yêu cầu API thất bại với mã trạng thái ${response.status}`);
-    }
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        const response = await fetch(`https://transcriptapi.com/mcp`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: requestBody
+        });
 
-    const data = await response.json();
-    return data.transcript || 'Không tìm thấy transcript hoặc video không hỗ trợ.';
+        if (!response.ok) {
+            let errorData;
+            try {
+                errorData = await response.json();
+            } catch (e) {
+                errorData = { message: `Yêu cầu API thất bại với mã trạng thái ${response.status}` };
+            }
+            throw new Error(errorData.message || `Yêu cầu API thất bại với mã trạng thái ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // If transcript is available, return it.
+        if (data.transcript) {
+            return data.transcript;
+        }
+
+        // If the job failed explicitly, stop trying.
+        if (data.status === 'FAILED') {
+            throw new Error('API không thể xử lý transcript cho video này.');
+        }
+
+        // If it's the last attempt and still no transcript, break to throw timeout error.
+        if (attempt === MAX_ATTEMPTS) {
+            break;
+        }
+        
+        // Wait before the next attempt
+        await new Promise(resolve => setTimeout(resolve, POLLING_INTERVAL_MS));
+    }
+    
+    // If loop finishes without returning, it means we timed out.
+    throw new Error('Không thể lấy transcript sau 1 phút. Video có thể đang được xử lý hoặc không có transcript.');
 };
+
 
 const getTranscript = async (videoId: string, apiKeys: string): Promise<string> => {
     return executeTranscriptKeyRotation(apiKeys, (key) => getTranscriptInternal(videoId, key));
