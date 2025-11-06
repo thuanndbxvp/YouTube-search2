@@ -182,7 +182,7 @@ export const generateTranscriptWithGemini = async (
             const ai = new GoogleGenAI({ apiKey });
             const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
-            const prompt = `Lấy giúp tôi transcript của video này: ${videoUrl}`;
+            const prompt = `Vui lòng trích xuất transcript (bản ghi lời) chính xác cho video tại URL sau: ${videoUrl}. Chỉ trả về nội dung transcript. Nếu video không có transcript hoặc không thể truy cập, hãy trả về duy nhất chuỗi: "ERROR: Không thể lấy được transcript cho video này."`;
             
             const response = await ai.models.generateContent({
                 model,

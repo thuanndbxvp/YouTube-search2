@@ -150,7 +150,7 @@ export const generateTranscriptWithOpenAI = async (
     }
 
     const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    const prompt = `Lấy giúp tôi transcript đầy đủ cho video YouTube sau: ${videoUrl}. Nếu video có phụ đề hoặc chú thích, hãy trích xuất trực tiếp chúng.`;
+    const prompt = `Trích xuất transcript đầy đủ cho video YouTube tại URL: ${videoUrl}. Yêu cầu của bạn là chỉ trả về phần nội dung của transcript. Không thêm bất kỳ lời chào, câu giới thiệu hay giải thích nào. Nếu video không có phụ đề/chú thích hoặc bạn không thể truy cập được video, hãy trả về duy nhất chuỗi sau: "ERROR: Không thể lấy được transcript cho video này."`;
 
     try {
       const response = await fetch(`${OPENAI_API_URL}/chat/completions`, {
