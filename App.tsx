@@ -1,6 +1,4 @@
-
-
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Header } from './components/Header';
 import { ApiModal } from './components/ApiModal';
 import { LibraryModal } from './components/LibraryModal';
@@ -14,13 +12,14 @@ import { AnalysisTools } from './components/AnalysisTools';
 import { calculateKeywordCounts, getTopKeywords } from './utils/keywords';
 import { ChannelHeader } from './components/ChannelHeader';
 import { CompetitiveAnalysisModal } from './components/CompetitiveAnalysisModal';
-import { TrashIcon, SpinnerIcon } from './components/Icons';
+import { TrashIcon, SpinnerIcon, ClipboardCopyIcon } from './components/Icons';
 
 const initialConfig: StoredConfig = {
   theme: 'blue',
   youtube: { key: '' },
   gemini: { key: '', model: 'gemini-2.5-pro' },
   openai: { key: '', model: 'gpt-5' },
+  transcript: { key: '' },
 };
 
 interface ChannelQueueListProps {
@@ -87,6 +86,146 @@ const ChannelQueueList: React.FC<ChannelQueueListProps> = ({
 };
 
 
+// --- START: Transcript Modal Component ---
+interface TranscriptModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    video: Video | null;
+    transcript: string;
+    isLoading: boolean;
+    error: string | null;
+    theme: Theme;
+}
+
+const TranscriptModal: React.FC<TranscriptModalProps> = ({ isOpen, onClose, video, transcript, isLoading, error, theme }) => {
+    const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
+
+    useEffect(() => {
+        if (isOpen) {
+            setCopyStatus('idle'); // Reset on open
+        }
+    }, [isOpen]);
+
+    if (!isOpen) return null;
+
+    const handleCopy = () => {
+        if (!transcript) return;
+        navigator.clipboard.writeText(transcript).then(() => {
+            setCopyStatus('copied');
+            setTimeout(() => setCopyStatus('idle'), 2000);
+        });
+    };
+
+    const renderContent = () => {
+        if (isLoading) {
+            return (
+                <div className="text-center py-12">
+                    <SpinnerIcon className="w-10 h-10 mx-auto animate-spin text-gray-400" />
+                    <p className="mt-4 text-gray-300">Đang lấy transcript...</p>
+                </div>
+            );
+        }
+        if (error) {
+            return (
+                <div className="text-center py-12">
+                    <p className="text-red-400">Lỗi:</p>
+                    <p className="mt-2 text-sm bg-red-900/50 p-3 rounded-md">{error}</p>
+                </div>
+            );
+        }
+        return (
+            <div className="bg-[#1a1b26] p-4 rounded-md h-full overflow-y-auto">
+                <p className="text-gray-300 text-sm whitespace-pre-wrap">{transcript}</p>
+            </div>
+        );
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 transition-opacity duration-300" onClick={onClose}>
+            <div className="bg-[#24283b] rounded-lg shadow-2xl p-6 w-full max-w-2xl flex flex-col" style={{ height: '70vh' }} onClick={(e) => e.stopPropagation()}>
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-bold text-white truncate pr-4">Transcript cho: {video?.snippet.title}</h2>
+                    <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
+                </div>
+
+                <div className="flex-grow min-h-0">
+                    {renderContent()}
+                </div>
+
+                <div className="mt-6 flex justify-end items-center space-x-4">
+                    <button 
+                        onClick={handleCopy} 
+                        disabled={isLoading || !!error || !transcript}
+                        className="flex items-center justify-center bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 text-sm disabled:opacity-50"
+                    >
+                        <ClipboardCopyIcon className="w-5 h-5 mr-2" />
+                        {copyStatus === 'copied' ? 'Đã sao chép!' : 'Sao chép'}
+                    </button>
+                    <button onClick={onClose} className={`py-2 px-6 rounded-lg bg-${theme}-600 hover:bg-${theme}-700 text-white font-semibold transition-colors`}>Đóng</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+// --- END: Transcript Modal Component ---
+
+// --- START: Transcript Service Logic ---
+async function executeTranscriptKeyRotation<T>(
+    keysString: string,
+    apiRequest: (key: string) => Promise<T>
+): Promise<T> {
+    const keys = keysString.split(/[\n,]+/).map(k => k.trim()).filter(Boolean);
+    if (keys.length === 0) {
+        throw new Error("Không có Transcript API key nào được cung cấp.");
+    }
+
+    let lastError: any = null;
+
+    for (const key of keys) {
+        try {
+            const result = await apiRequest(key);
+            return result;
+        } catch (error: any) {
+            lastError = error;
+            console.warn(`Transcript API key ...${key.slice(-4)} thất bại. Thử key tiếp theo. Lỗi: ${error.message}`);
+            continue;
+        }
+    }
+    
+    throw new Error(`Tất cả API key của Transcript đều không hợp lệ. Lỗi cuối cùng: ${lastError.message}`);
+}
+
+const getTranscriptInternal = async (videoId: string, apiKey: string): Promise<string> => {
+    const response = await fetch(`https://transcriptapi.com/mcp`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+            url: `https://www.youtube.com/watch?v=${videoId}`
+        })
+    });
+
+    if (!response.ok) {
+        let errorData;
+        try {
+            errorData = await response.json();
+        } catch (e) {
+            errorData = { message: `Yêu cầu API thất bại với mã trạng thái ${response.status}` };
+        }
+        throw new Error(errorData.message || `Yêu cầu API thất bại với mã trạng thái ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.transcript || 'Không tìm thấy transcript hoặc video không hỗ trợ.';
+};
+
+const getTranscript = async (videoId: string, apiKeys: string): Promise<string> => {
+    return executeTranscriptKeyRotation(apiKeys, (key) => getTranscriptInternal(videoId, key));
+};
+// --- END: Transcript Service Logic ---
+
 export default function App() {
   const [appConfig, setAppConfig] = useLocalStorage<StoredConfig>('yt-analyzer-config-v2', initialConfig);
   const [savedSessions, setSavedSessions] = useLocalStorage<SavedSession[]>('yt-analyzer-sessions-v1', []);
@@ -106,6 +245,14 @@ export default function App() {
   
   const [channelQueue, setChannelQueue] = useState<string[]>([]);
   const [currentlyAnalyzingUrl, setCurrentlyAnalyzingUrl] = useState<string | null>(null);
+
+  const [transcriptModalState, setTranscriptModalState] = useState({
+      isOpen: false,
+      video: null as Video | null,
+      transcript: '',
+      isLoading: false,
+      error: null as string | null,
+  });
 
   const createInitialBrainstormMessage = useCallback((chInfo: ChannelInfo, keywords: string[]): ChatMessage[] => {
       if (!chInfo || keywords.length === 0) return [];
@@ -298,6 +445,24 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
     }
   };
 
+  const handleGetTranscript = async (video: Video) => {
+    setTranscriptModalState({ isOpen: true, video, transcript: '', isLoading: true, error: null });
+
+    const transcriptApiKey = appConfig.transcript?.key;
+    if (!transcriptApiKey) {
+        setTranscriptModalState(s => ({ ...s, isLoading: false, error: 'Vui lòng thêm Transcript API Key trong phần cài đặt API.' }));
+        return;
+    }
+
+    try {
+        const transcriptText = await getTranscript(video.id, transcriptApiKey);
+        setTranscriptModalState(s => ({ ...s, isLoading: false, transcript: transcriptText }));
+    } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Đã xảy ra lỗi không xác định.';
+        setTranscriptModalState(s => ({ ...s, isLoading: false, error: errorMsg }));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#1a1b26] text-[#a9b1d6] font-sans">
       <ApiModal 
@@ -321,6 +486,15 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
         onClose={() => setIsCompetitiveAnalysisModalOpen(false)}
         sessions={savedSessions}
         appConfig={appConfig}
+        theme={appConfig.theme}
+      />
+      <TranscriptModal 
+        isOpen={transcriptModalState.isOpen}
+        onClose={() => setTranscriptModalState(s => ({ ...s, isOpen: false }))}
+        video={transcriptModalState.video}
+        transcript={transcriptModalState.transcript}
+        isLoading={transcriptModalState.isLoading}
+        error={transcriptModalState.error}
         theme={appConfig.theme}
       />
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -366,7 +540,7 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
                         />
                     </div>
                 </div>
-                <VideoTable videos={videos} theme={appConfig.theme} />
+                <VideoTable videos={videos} theme={appConfig.theme} onGetTranscript={handleGetTranscript} />
                  {nextPageToken && (
                     <div className="text-center mt-8">
                       <button

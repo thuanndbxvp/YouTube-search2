@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { Video, Theme } from '../types';
-import { EyeIcon, LikeIcon, PlayIcon, SortAscIcon, SortDescIcon, ClockIcon } from './Icons';
+import { EyeIcon, LikeIcon, PlayIcon, SortAscIcon, SortDescIcon, ClockIcon, DocumentTextIcon } from './Icons';
 import { parseISO8601Duration, formatNumber, formatDate } from '../utils/formatters';
 
 interface VideoTableProps {
   videos: Video[];
   theme: Theme;
+  onGetTranscript: (video: Video) => void;
 }
 
 type SortKey = 'publishedAt' | 'viewCount' | 'likeCount' | 'duration';
@@ -38,7 +39,7 @@ const SortableHeader: React.FC<{
   );
 };
 
-export const VideoTable: React.FC<VideoTableProps> = ({ videos, theme }) => {
+export const VideoTable: React.FC<VideoTableProps> = ({ videos, theme, onGetTranscript }) => {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'publishedAt', direction: 'desc' });
 
   const sortedVideos = useMemo(() => {
@@ -138,15 +139,24 @@ export const VideoTable: React.FC<VideoTableProps> = ({ videos, theme }) => {
                 </div>
               </td>
               <td className="p-4 text-sm text-center align-top">
-                 <a 
-                    href={`https://www.youtube.com/watch?v=${video.id}`} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
-                >
-                    <PlayIcon className="w-4 h-4 mr-2" />
-                    Đi tới video
-                 </a>
+                 <div className="flex items-center justify-center space-x-2">
+                    <a 
+                        href={`https://www.youtube.com/watch?v=${video.id}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        title="Đi tới video"
+                        className="inline-flex items-center justify-center bg-red-600 hover:bg-red-700 text-white p-2.5 rounded-lg transition-colors duration-200"
+                    >
+                        <PlayIcon className="w-4 h-4" />
+                    </a>
+                     <button
+                        onClick={() => onGetTranscript(video)}
+                        title="Lấy transcript video"
+                        className="inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white p-2.5 rounded-lg transition-colors duration-200"
+                    >
+                        <DocumentTextIcon className="w-4 h-4" />
+                    </button>
+                 </div>
               </td>
             </tr>
           ))}

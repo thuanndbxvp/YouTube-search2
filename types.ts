@@ -13,6 +13,9 @@ export interface StoredConfig {
     key: string;
     model: string;
   };
+  transcript?: {
+    key: string;
+  };
 }
 
 export type AiProvider = 'gemini' | 'openai';
