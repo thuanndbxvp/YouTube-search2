@@ -6,6 +6,7 @@ import { ChannelInputForm } from './components/ChannelInputForm';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { Video, ChannelInfo, StoredConfig, SavedSession, ChatMessage, Theme, AiProvider } from './types';
 import { getChannelInfoByUrl, fetchVideosPage } from './services/youtubeService';
+import { generateTranscriptWithGemini } from './services/geminiService';
 import { VideoTable } from './components/VideoTable';
 import { KeywordAnalysis } from './components/KeywordAnalysis';
 import { AnalysisTools } from './components/AnalysisTools';
@@ -21,7 +22,6 @@ const initialConfig: StoredConfig = {
   youtube: { key: '' },
   gemini: { key: '' },
   openai: { key: '' },
-  transcript: { key: '' },
 };
 
 interface ChannelQueueListProps {
@@ -123,7 +123,7 @@ const TranscriptModal: React.FC<TranscriptModalProps> = ({ isOpen, onClose, vide
             return (
                 <div className="text-center py-12">
                     <SpinnerIcon className="w-10 h-10 mx-auto animate-spin text-gray-400" />
-                    <p className="mt-4 text-gray-300">Đang lấy transcript... Quá trình này có thể mất đến một phút.</p>
+                    <p className="mt-4 text-gray-300">AI đang lấy transcript... Quá trình này có thể mất một lúc.</p>
                 </div>
             );
         }
@@ -171,79 +171,6 @@ const TranscriptModal: React.FC<TranscriptModalProps> = ({ isOpen, onClose, vide
 };
 // --- END: Transcript Modal Component ---
 
-// --- START: Transcript Service Logic ---
-async function executeTranscriptKeyRotation<T>(
-    keysString: string,
-    apiRequest: (key: string) => Promise<T>
-): Promise<T> {
-    const keys = keysString.split(/[\n,]+/).map(k => k.trim()).filter(Boolean);
-    if (keys.length === 0) {
-        throw new Error("Không có Transcript API key nào được cung cấp.");
-    }
-
-    let lastError: any = null;
-
-    for (const key of keys) {
-        try {
-            const result = await apiRequest(key);
-            return result;
-        } catch (error: any) {
-            lastError = error;
-            console.warn(`Transcript API key ...${key.slice(-4)} thất bại. Thử key tiếp theo. Lỗi: ${error.message}`);
-            continue;
-        }
-    }
-    
-    throw new Error(`Tất cả API key của Transcript đều không hợp lệ. Lỗi cuối cùng: ${lastError.message}`);
-}
-
-const getTranscriptInternal = async (videoId: string, apiKey: string): Promise<string> => {
-    const url = new URL('https://transcriptapi.com/api/v2/youtube/transcript');
-    url.searchParams.append('video_url', videoId);
-    url.searchParams.append('format', 'text');
-    url.searchParams.append('include_timestamp', 'false');
-
-    const response = await fetch(url.toString(), {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${apiKey}`
-        }
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-        let errorMessage = data.detail || `Yêu cầu API thất bại với mã trạng thái ${response.status}`;
-        
-        if (response.status === 401) {
-            errorMessage = "API key không hợp lệ hoặc bị thiếu.";
-        } else if (response.status === 402) {
-            errorMessage = "Hết credit. Vui lòng thêm credit tại trang transcriptapi.com.";
-        } else if (response.status === 404) {
-            errorMessage = "Không tìm thấy video hoặc video không có transcript.";
-        } else if (response.status === 429) {
-            errorMessage = "Vượt quá giới hạn yêu cầu. Vui lòng thử lại sau.";
-        }
-
-        throw new Error(errorMessage);
-    }
-
-    if (typeof data.transcript === 'string') {
-        return data.transcript;
-    } else {
-        if (Array.isArray(data.transcript)) {
-            return data.transcript.map((segment: any) => segment.text).join(' ');
-        }
-        throw new Error('Định dạng transcript trả về không mong đợi.');
-    }
-};
-
-
-const getTranscript = async (videoId: string, apiKeys: string): Promise<string> => {
-    return executeTranscriptKeyRotation(apiKeys, (key) => getTranscriptInternal(videoId, key));
-};
-// --- END: Transcript Service Logic ---
-
 export default function App() {
   const [appConfig, setAppConfig] = useLocalStorage<StoredConfig>('yt-analyzer-config-v2', initialConfig);
   const [savedSessions, setSavedSessions] = useLocalStorage<SavedSession[]>('yt-analyzer-sessions-v1', []);
@@ -286,7 +213,6 @@ export default function App() {
                   youtube: { key: currentOldConfig.youtube.key },
                   gemini: { key: currentOldConfig.gemini.key },
                   openai: { key: currentOldConfig.openai.key },
-                  transcript: { key: currentOldConfig.transcript?.key || '' },
                   aiProvider: provider,
                   aiModel: model || (provider === 'openai' ? 'gpt-4o' : 'gemini-2.5-pro'),
               };
@@ -489,14 +415,18 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
   const handleGetTranscript = async (video: Video) => {
     setTranscriptModalState({ isOpen: true, video, transcript: '', isLoading: true, error: null });
 
-    const transcriptApiKey = appConfig.transcript?.key;
-    if (!transcriptApiKey) {
-        setTranscriptModalState(s => ({ ...s, isLoading: false, error: 'Vui lòng thêm Transcript API Key trong phần cài đặt API.' }));
+    if (appConfig.aiProvider !== 'gemini' || !appConfig.gemini.key) {
+        const errorMsg = 'Tính năng này yêu cầu sử dụng model Gemini. Vui lòng thêm Gemini API Key và chọn model Gemini trong phần cài đặt API.';
+        setTranscriptModalState(s => ({ ...s, isLoading: false, error: errorMsg }));
         return;
     }
 
     try {
-        const transcriptText = await getTranscript(video.id, transcriptApiKey);
+        const transcriptText = await generateTranscriptWithGemini(
+            appConfig.gemini.key,
+            appConfig.aiModel,
+            video.id
+        );
         setTranscriptModalState(s => ({ ...s, isLoading: false, transcript: transcriptText }));
     } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Đã xảy ra lỗi không xác định.';

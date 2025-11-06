@@ -145,17 +145,10 @@ const parseKeysString = (keysString: string): KeyWithStatus[] =>
 const joinKeys = (keys: KeyWithStatus[]): string =>
     keys.map(k => k.value.trim()).filter(Boolean).join('\n');
 
-const validateTranscriptKey = async (key: string): Promise<boolean> => {
-    // No documented validation endpoint, so we'll just check if the key is not empty.
-    // The real validation will happen on the first API call.
-    return Promise.resolve(key.trim().length > 0);
-};
-
 export const ApiModal: React.FC<ApiModalProps> = ({ isOpen, onClose, config, setConfig, theme }) => {
   const [youtubeKeys, setYoutubeKeys] = useState<KeyWithStatus[]>([]);
   const [geminiKeys, setGeminiKeys] = useState<KeyWithStatus[]>([]);
   const [openaiKeys, setOpenaiKeys] = useState<KeyWithStatus[]>([]);
-  const [transcriptKeys, setTranscriptKeys] = useState<KeyWithStatus[]>([]);
   
   const [activeAi, setActiveAi] = useState(`${config.aiProvider}:${config.aiModel}`);
 
@@ -164,7 +157,6 @@ export const ApiModal: React.FC<ApiModalProps> = ({ isOpen, onClose, config, set
       setYoutubeKeys(parseKeysString(config.youtube.key));
       setGeminiKeys(parseKeysString(config.gemini.key));
       setOpenaiKeys(parseKeysString(config.openai.key));
-      setTranscriptKeys(parseKeysString(config.transcript?.key || ''));
       setActiveAi(`${config.aiProvider}:${config.aiModel}`);
     }
   }, [config, isOpen]);
@@ -178,7 +170,6 @@ export const ApiModal: React.FC<ApiModalProps> = ({ isOpen, onClose, config, set
         youtube: { key: joinKeys(youtubeKeys) },
         gemini: { key: joinKeys(geminiKeys) },
         openai: { key: joinKeys(openaiKeys) },
-        transcript: { key: joinKeys(transcriptKeys) },
         aiProvider: provider as AiProvider,
         aiModel: model,
     }));
@@ -249,20 +240,6 @@ export const ApiModal: React.FC<ApiModalProps> = ({ isOpen, onClose, config, set
                     placeholder="Dán API Key OpenAI vào đây"
                     theme={theme}
                 />
-            </div>
-
-            {/* TranscriptAPI Section */}
-            <div>
-              <h3 className="text-lg font-semibold text-lime-400 mb-2">Transcript API</h3>
-              <p className="text-xs text-gray-400 mb-2">Dịch vụ lấy transcript video. Lấy key tại <a href="https://transcriptapi.com/" target="_blank" rel="noopener noreferrer" className={`text-${theme}-400 underline`}>transcriptapi.com</a>.</p>
-              <label className="block text-sm font-medium text-gray-300 mb-2">API Keys</label>
-              <ApiKeyManager 
-                keys={transcriptKeys}
-                setKeys={setTranscriptKeys}
-                validateFn={validateTranscriptKey}
-                placeholder="Dán API Key TranscriptAPI vào đây"
-                theme={theme}
-              />
             </div>
         </div>
 

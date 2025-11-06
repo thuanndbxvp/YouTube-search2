@@ -168,3 +168,34 @@ export const performCompetitiveAnalysis = async (
     }
   });
 };
+
+export const generateTranscriptWithGemini = async (
+    apiKeys: string,
+    model: string,
+    videoId: string
+): Promise<string> => {
+    return executeWithKeyRotation(apiKeys, async (apiKey) => {
+        if (!apiKey) {
+            throw new Error("Gemini API key is not provided.");
+        }
+        try {
+            const ai = new GoogleGenAI({ apiKey });
+            const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
+            const prompt = `Lấy giúp tôi transcript của video này: ${videoUrl}`;
+            
+            const response = await ai.models.generateContent({
+                model,
+                contents: [{ parts: [{ text: prompt }] }],
+            });
+
+            return response.text;
+        } catch (error) {
+            console.error("Error generating transcript with Gemini:", error);
+            if (error instanceof Error) {
+                throw new Error(`Lỗi từ Gemini API: ${error.message}`);
+            }
+            throw new Error("Đã xảy ra lỗi không xác định khi tạo transcript.");
+        }
+    });
+};
