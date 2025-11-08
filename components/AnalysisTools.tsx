@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ChannelInfo, StoredConfig, ChatMessage, Video, Theme } from '../types';
 import { BrainstormModal } from './BrainstormModal';
-import { SparklesIcon } from './Icons';
+import { SparklesIcon, ArrowPathIcon, SpinnerIcon } from './Icons';
 
 interface AnalysisToolsProps {
     videos: Video[];
@@ -10,9 +10,22 @@ interface AnalysisToolsProps {
     brainstormMessages: ChatMessage[];
     setBrainstormMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
     theme: Theme;
+    onUpdateChannel: () => void;
+    isUpdating: boolean;
+    isLoadedFromSession: boolean;
 }
 
-export const AnalysisTools: React.FC<AnalysisToolsProps> = ({ videos, channelInfo, appConfig, brainstormMessages, setBrainstormMessages, theme }) => {
+export const AnalysisTools: React.FC<AnalysisToolsProps> = ({ 
+    videos, 
+    channelInfo, 
+    appConfig, 
+    brainstormMessages, 
+    setBrainstormMessages, 
+    theme,
+    onUpdateChannel,
+    isUpdating,
+    isLoadedFromSession
+}) => {
     const [isBrainstormModalOpen, setIsBrainstormModalOpen] = useState(false);
 
     const isBrainstormDisabled = (!appConfig.gemini.key || appConfig.gemini.key.trim() === '') && 
@@ -46,6 +59,21 @@ export const AnalysisTools: React.FC<AnalysisToolsProps> = ({ videos, channelInf
                         <SparklesIcon className="h-5 w-5 mr-2" />
                         Brainstorm & Phân tích với AI
                     </button>
+                    {isLoadedFromSession && (
+                        <button
+                            onClick={onUpdateChannel}
+                            disabled={isUpdating}
+                            title="Làm mới dữ liệu kênh từ YouTube"
+                            className="w-full flex items-center justify-center bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                            {isUpdating ? (
+                                <SpinnerIcon className="h-5 w-5 mr-2 animate-spin" />
+                            ) : (
+                                <ArrowPathIcon className="h-5 w-5 mr-2" />
+                            )}
+                            {isUpdating ? 'Đang cập nhật...' : 'Cập nhật kênh'}
+                        </button>
+                    )}
                 </div>
             </div>
         </>
