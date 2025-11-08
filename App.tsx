@@ -1,3 +1,5 @@
+
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { Header } from './components/Header';
 import { ApiModal } from './components/ApiModal';
@@ -15,6 +17,11 @@ import { calculateKeywordCounts, getTopKeywords } from './utils/keywords';
 import { ChannelHeader } from './components/ChannelHeader';
 import { CompetitiveAnalysisModal } from './components/CompetitiveAnalysisModal';
 import { TrashIcon, SpinnerIcon, ClipboardCopyIcon } from './components/Icons';
+import { formatDate, parseISO8601Duration } from './utils/formatters';
+
+// FIX: `declare` must be at the top level. Moved from handleExportAllToExcel.
+// Make XLSX globally available from the script tag in index.html
+declare const XLSX: any;
 
 const initialConfig: StoredConfig = {
   theme: 'blue',
@@ -595,6 +602,46 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
     }
   };
 
+  const handleExportAllToExcel = () => {
+    if (savedSessions.length === 0) {
+        alert('Không có phiên nào để xuất.');
+        return;
+    }
+
+    const workbook = XLSX.utils.book_new();
+
+    // Summary Sheet
+    const summaryData = savedSessions.map(session => ({
+        'Tên Kênh': session.channelInfo.title,
+        'Lượt Đăng Ký': parseInt(session.channelInfo.subscriberCount, 10),
+        'Số Lượng Video': parseInt(session.channelInfo.videoCount, 10),
+        'Ngày Lưu': new Date(session.savedAt).toLocaleString('vi-VN'),
+    }));
+    const summaryWorksheet = XLSX.utils.json_to_sheet(summaryData);
+    summaryWorksheet['!cols'] = [{ wch: 40 }, { wch: 15 }, { wch: 15 }, { wch: 20 }];
+    XLSX.utils.book_append_sheet(workbook, summaryWorksheet, 'Tổng Quan Thư Viện');
+
+    // Individual Channel Sheets
+    savedSessions.forEach(session => {
+        const videoData = session.videos.map(video => ({
+            'Tiêu đề': video.snippet.title,
+            'Ngày đăng': formatDate(video.snippet.publishedAt),
+            'Lượt xem': parseInt(video.statistics.viewCount, 10),
+            'Lượt thích': parseInt(video.statistics.likeCount, 10),
+            'Thời lượng': parseISO8601Duration(video.contentDetails.duration),
+            'URL': `https://www.youtube.com/watch?v=${video.id}`
+        }));
+        const videoWorksheet = XLSX.utils.json_to_sheet(videoData);
+        videoWorksheet['!cols'] = [{ wch: 70 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 45 }];
+        // Sheet names have a 31-character limit
+        const safeSheetName = session.channelInfo.title.replace(/[^\w\s]/gi, '').substring(0, 31);
+        XLSX.utils.book_append_sheet(workbook, videoWorksheet, safeSheetName);
+    });
+
+    const date = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(workbook, `Thu_vien_kenh_YouTube_${date}.xlsx`);
+  };
+
   const handleGetTranscript = async (video: Video) => {
       setTranscriptModalState({
           isOpen: true,
@@ -663,6 +710,7 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
 
       try {
         const selectedSessions = savedSessions.filter(s => selectedChannelIds.includes(s.id));
+        const channelNames = selectedSessions.map(s => s.channelInfo.title);
 
         const headers = ["Channel Name", "Video Title", "Publish Date", "View Count", "Likes", "Duration (ISO 8601)"];
         const rows = selectedSessions.flatMap(session => 
@@ -681,7 +729,8 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
             appConfig.gemini.key,
             appConfig.aiModel,
             csvData,
-            analysisInstructions
+            analysisInstructions,
+            channelNames
         );
 
         setAnalysisState({ isLoading: false, error: null, result: result, isComplete: true });

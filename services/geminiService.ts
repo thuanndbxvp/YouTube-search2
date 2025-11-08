@@ -1,4 +1,5 @@
 
+
 import { GoogleGenAI } from "@google/genai";
 import { ChatMessage } from '../types';
 
@@ -120,7 +121,8 @@ export const performCompetitiveAnalysis = async (
   apiKeys: string,
   model: string,
   csvData: string,
-  analysisInstructions: string
+  analysisInstructions: string,
+  channelNames: string[]
 ): Promise<string> => {
   return executeWithKeyRotation(apiKeys, async (apiKey) => {
     if (!apiKey) {
@@ -128,6 +130,7 @@ export const performCompetitiveAnalysis = async (
     }
     try {
       const ai = new GoogleGenAI({ apiKey });
+      const channelList = channelNames.join(', ');
 
       const fullPrompt = `
         Với vai trò là một chuyên gia phân tích dữ liệu YouTube, hãy thực hiện nhiệm vụ phân tích cạnh tranh dựa trên các hướng dẫn và dữ liệu được cung cấp.
@@ -150,7 +153,7 @@ export const performCompetitiveAnalysis = async (
 
         **Yêu cầu:**
         Hãy thực hiện phân tích theo định nghĩa nhiệm vụ trong file JSON và trả về kết quả.
-        Tập trung vào việc tạo ra phần **"text_summary"** trước tiên, định dạng bằng Markdown rõ ràng, dễ đọc, tuân thủ văn phong và cấu trúc đã chỉ định. Sử dụng tiếng Việt cho toàn bộ báo cáo phân tích.
+        Tập trung vào việc tạo ra phần **"text_summary"** trước tiên, định dạng bằng Markdown rõ ràng, dễ đọc, tuân thủ văn phong và cấu trúc đã chỉ định. Sử dụng tiếng Việt cho toàn bộ báo cáo phân tích. Thêm một dòng "Các kênh phân tích: ${channelList}" vào bên dưới dòng "Người thực hiện:" ở đầu báo cáo.
       `;
 
       const response = await ai.models.generateContent({

@@ -26,13 +26,11 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
   if (!isOpen) return null;
 
   const sortedSessions = useMemo(() => {
-    // Safety check: Ensure `sessions` is an array before proceeding.
     if (!Array.isArray(sessions)) {
         console.error("LibraryModal received a non-array value for sessions:", sessions);
         return [];
     }
 
-    // Robustly filter out any sessions that are null, undefined, or missing essential data to prevent crashes.
     const validSessions = sessions.filter(s => 
       s && 
       typeof s.id === 'string' &&
@@ -44,9 +42,9 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
       typeof s.savedAt === 'string'
     );
 
-    // Default sort: newest first
     return validSessions.sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime());
   }, [sessions]);
+
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 transition-opacity duration-300" onClick={onClose}>

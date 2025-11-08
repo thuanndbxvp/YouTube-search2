@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StoredConfig, Theme, AiProvider } from '../types';
 import { validateSingleApiKey as validateYoutubeKey } from '../services/youtubeService';
 import { validateSingleApiKey as validateGeminiKey } from '../services/geminiService';
 import { validateSingleApiKey as validateOpenAIKey } from '../services/openaiService';
-import { CheckCircleIcon, XCircleIcon, TrashIcon, SpinnerIcon } from './Icons';
+import { CheckCircleIcon, XCircleIcon, TrashIcon, SpinnerIcon, UploadIcon, DownloadIcon } from './Icons';
 
 interface ApiModalProps {
   isOpen: boolean;
@@ -151,6 +151,7 @@ export const ApiModal: React.FC<ApiModalProps> = ({ isOpen, onClose, config, set
   const [openaiKeys, setOpenaiKeys] = useState<KeyWithStatus[]>([]);
   
   const [activeAi, setActiveAi] = useState(`${config.aiProvider}:${config.aiModel}`);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -176,6 +177,64 @@ export const ApiModal: React.FC<ApiModalProps> = ({ isOpen, onClose, config, set
     onClose();
   };
   
+  const handleExportKeys = () => {
+    const keysToExport = {
+      youtube: joinKeys(youtubeKeys),
+      gemini: joinKeys(geminiKeys),
+      openai: joinKeys(openaiKeys),
+    };
+    const dataStr = JSON.stringify(keysToExport, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'youtube_analyzer_api_keys.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const result = e.target?.result;
+            if (typeof result === 'string') {
+                const parsedKeys = JSON.parse(result);
+                if (
+                    typeof parsedKeys.youtube === 'string' &&
+                    typeof parsedKeys.gemini === 'string' &&
+                    typeof parsedKeys.openai === 'string'
+                ) {
+                    setYoutubeKeys(parseKeysString(parsedKeys.youtube));
+                    setGeminiKeys(parseKeysString(parsedKeys.gemini));
+                    setOpenaiKeys(parseKeysString(parsedKeys.openai));
+                    alert('Đã nhập API keys thành công!');
+                } else {
+                    throw new Error('Định dạng tệp JSON không hợp lệ.');
+                }
+            }
+        } catch (error) {
+            alert(`Lỗi: Không thể đọc hoặc phân tích tệp JSON. ${error instanceof Error ? error.message : ''}`);
+            console.error("JSON parsing error:", error);
+        }
+    };
+    reader.onerror = () => {
+        alert('Lỗi: Không thể đọc tệp.');
+    };
+    reader.readAsText(file);
+    
+    event.target.value = '';
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 transition-opacity duration-300" onClick={onClose}>
       <div className="bg-[#24283b] rounded-lg shadow-2xl p-6 w-full max-w-2xl transform transition-all duration-300" onClick={(e) => e.stopPropagation()}>
@@ -243,7 +302,26 @@ export const ApiModal: React.FC<ApiModalProps> = ({ isOpen, onClose, config, set
             </div>
         </div>
 
-        <div className="mt-8 flex justify-end">
+        <div className="mt-8 flex justify-between items-center">
+            <div className="flex items-center space-x-2">
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" className="hidden" />
+                 <button 
+                    onClick={handleImportClick}
+                    className="flex items-center justify-center bg-gray-600 hover:bg-gray-700 text-white font-semibold text-sm py-2 px-4 rounded-md transition-colors"
+                    title="Nhập các keys từ tệp .json"
+                >
+                    <UploadIcon className="w-4 h-4 mr-2" />
+                    Nhập Keys
+                </button>
+                 <button 
+                    onClick={handleExportKeys}
+                    className="flex items-center justify-center bg-gray-600 hover:bg-gray-700 text-white font-semibold text-sm py-2 px-4 rounded-md transition-colors"
+                    title="Xuất tất cả các keys ra tệp .json"
+                >
+                    <DownloadIcon className="w-4 h-4 mr-2" />
+                    Xuất Keys
+                </button>
+            </div>
           <button onClick={handleSaveAndClose} className={`py-2 px-6 rounded-lg bg-${theme}-600 hover:bg-${theme}-700 text-white font-semibold transition-colors`}>Lưu và Đóng</button>
         </div>
       </div>
