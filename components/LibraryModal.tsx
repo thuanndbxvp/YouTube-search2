@@ -14,6 +14,7 @@ interface LibraryModalProps {
   theme: Theme;
 }
 
+
 const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleString('vi-VN', {
         day: '2-digit',
@@ -25,16 +26,13 @@ const formatDate = (dateString: string): string => {
 };
 
 export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, sessions, onLoad, onDelete, onUpdate, updatingSessionId, theme }) => {
-
-  if (!isOpen) return null;
-
-  const sortedSessions = useMemo(() => {
+  const validSessions = useMemo(() => {
     if (!Array.isArray(sessions)) {
         console.error("LibraryModal received a non-array value for sessions:", sessions);
         return [];
     }
 
-    const validSessions = sessions.filter(s => 
+    const filteredSessions = sessions.filter(s => 
       s && 
       typeof s.id === 'string' &&
       s.channelInfo &&
@@ -44,10 +42,17 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
       Array.isArray(s.videos) &&
       typeof s.savedAt === 'string'
     );
+    
+    // Sort by saved date descending (most recent first) as a default.
+    return [...filteredSessions].sort((a, b) => {
+        const aTime = new Date(a.savedAt).getTime();
+        const bTime = new Date(b.savedAt).getTime();
+        return (isNaN(bTime) ? 0 : bTime) - (isNaN(aTime) ? 0 : aTime);
+    });
 
-    return validSessions.sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime());
   }, [sessions]);
-
+  
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 transition-opacity duration-300" onClick={onClose}>
@@ -58,8 +63,8 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
         </div>
 
         <div className="flex-grow overflow-y-auto pr-2 space-y-3">
-          {sortedSessions.length > 0 ? (
-            sortedSessions.map(session => (
+          {validSessions.length > 0 ? (
+            validSessions.map(session => (
               <div key={session.id} className="flex items-center bg-[#2d303e] p-3 rounded-lg">
                 <img src={session.channelInfo.thumbnail} alt={session.channelInfo.title} className="w-16 h-16 rounded-full mr-4" />
                 <div className="flex-grow">
