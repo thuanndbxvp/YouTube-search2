@@ -121,17 +121,24 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
     const [validationError, setValidationError] = useState<string | null>(null);
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'savedAt', direction: 'desc' });
 
-    // FIX: Filter out corrupted sessions from localStorage to prevent crashes.
+    // FIX: Robustly filter corrupted sessions from localStorage to prevent crashes.
     const validSessions = useMemo(() => {
+        // Safety check: Ensure `sessions` is an array before proceeding.
+        if (!Array.isArray(sessions)) {
+            console.error("CompetitiveAnalysisModal received a non-array value for sessions:", sessions);
+            return [];
+        }
+
+        // Robustly filter out any sessions that are null, undefined, or missing essential data to prevent crashes.
         return sessions.filter(s =>
             s &&
-            s.id &&
-            s.savedAt &&
+            typeof s.id === 'string' &&
+            typeof s.savedAt === 'string' &&
             s.channelInfo &&
-            s.channelInfo.id &&
-            s.channelInfo.title &&
-            s.channelInfo.subscriberCount &&
-            s.channelInfo.videoCount
+            typeof s.channelInfo.id === 'string' &&
+            typeof s.channelInfo.title === 'string' &&
+            typeof s.channelInfo.subscriberCount === 'string' &&
+            typeof s.channelInfo.videoCount === 'string'
         );
     }, [sessions]);
 
@@ -173,6 +180,9 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
                 default:
                     aValue = new Date(a.savedAt).getTime();
                     bValue = new Date(b.savedAt).getTime();
+                    // Handle cases where parsing might result in NaN
+                    if (isNaN(aValue)) aValue = 0;
+                    if (isNaN(bValue)) bValue = 0;
                     break;
             }
 
