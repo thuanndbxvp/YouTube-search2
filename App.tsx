@@ -248,6 +248,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [updatingSessionId, setUpdatingSessionId] = useState<string | null>(null);
   const [isLoadedFromSession, setIsLoadedFromSession] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'saving' | 'error'>('idle');
@@ -486,6 +487,58 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
       setIsUpdating(false);
     }
   }, [channelInfo, appConfig.youtube.key, setSavedSessions, createInitialBrainstormMessage]);
+  
+  const handleUpdateSession = useCallback(async (sessionId: string) => {
+      const sessionToUpdate = savedSessions.find(s => s.id === sessionId);
+      if (!sessionToUpdate || !appConfig.youtube.key) {
+          setError('Không tìm thấy phiên hoặc thiếu API key để cập nhật.');
+          return;
+      }
+      setUpdatingSessionId(sessionId);
+      setError(null);
+      
+      try {
+          const urlToFetch = sessionToUpdate.channelInfo.customUrl 
+              ? `https://www.youtube.com/${sessionToUpdate.channelInfo.customUrl}` 
+              : `https://www.youtube.com/channel/${sessionToUpdate.channelInfo.id}`;
+        
+          const newInfo = await getChannelInfoByUrl(urlToFetch, appConfig.youtube.key);
+          const videoData = await fetchVideosPage(newInfo.uploadsPlaylistId, appConfig.youtube.key);
+          
+          const keywordCounts = calculateKeywordCounts(videoData.videos);
+          const topKeywords = getTopKeywords(keywordCounts, 10);
+          const newBrainstormMessages = createInitialBrainstormMessage(newInfo, topKeywords);
+
+          const updatedSession: SavedSession = {
+              id: newInfo.id,
+              savedAt: new Date().toISOString(),
+              channelInfo: newInfo,
+              videos: videoData.videos,
+              nextPageToken: videoData.nextPageToken,
+              brainstormMessages: newBrainstormMessages,
+          };
+        
+          setSavedSessions(prevSessions => {
+              const newSessionsList = [...prevSessions];
+              const existingIndex = newSessionsList.findIndex(s => s.id === updatedSession.id);
+              if (existingIndex > -1) {
+                  newSessionsList[existingIndex] = updatedSession;
+              }
+              return newSessionsList;
+          });
+        
+      } catch (err) {
+          const errorMsg = err instanceof Error ? err.message : `Không thể cập nhật kênh ${sessionToUpdate.channelInfo.title}.`;
+          console.error(err);
+          // Set error temporarily to show user
+          setError(errorMsg);
+          // Clear error after a few seconds
+          setTimeout(() => setError(null), 5000);
+      } finally {
+          setUpdatingSessionId(null);
+      }
+  }, [savedSessions, appConfig.youtube.key, setSavedSessions, createInitialBrainstormMessage]);
+
 
   const handleDeleteSession = async (sessionId: string) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa phiên này không?')) {
@@ -658,6 +711,8 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
         onLoad={handleLoadSession}
         onDelete={handleDeleteSession}
         onImport={handleImportSessions}
+        onUpdate={handleUpdateSession}
+        updatingSessionId={updatingSessionId}
         theme={appConfig.theme}
       />
       <CompetitiveAnalysisModal

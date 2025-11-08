@@ -1,8 +1,6 @@
-
-
-import React, { useRef } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import { SavedSession, Theme } from '../types';
-import { TrashIcon, DownloadIcon, UploadIcon, TableCellsIcon } from './Icons';
+import { TrashIcon, DownloadIcon, UploadIcon, TableCellsIcon, ArrowPathIcon, SpinnerIcon, SortAscIcon, SortDescIcon } from './Icons';
 import { parseISO8601Duration, formatDate as formatDateForExcel } from '../utils/formatters';
 
 declare const XLSX: any;
@@ -14,6 +12,8 @@ interface LibraryModalProps {
   onLoad: (sessionId: string) => void;
   onDelete: (sessionId: string) => void;
   onImport: (sessions: SavedSession[]) => void;
+  onUpdate: (sessionId: string) => void;
+  updatingSessionId: string | null;
   theme: Theme;
 }
 
@@ -27,8 +27,17 @@ const formatDate = (dateString: string): string => {
     });
 };
 
-export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, sessions, onLoad, onDelete, onImport, theme }) => {
+type SortKey = 'savedAt' | 'videoCount' | 'subscriberCount';
+type SortDirection = 'asc' | 'desc';
+
+interface SortConfig {
+    key: SortKey;
+    direction: SortDirection;
+}
+
+export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, sessions, onLoad, onDelete, onImport, onUpdate, updatingSessionId, theme }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'savedAt', direction: 'desc' });
 
   if (!isOpen) return null;
 
@@ -112,19 +121,68 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
     XLSX.writeFile(workbook, fileName);
   };
 
+  const sortedSessions = useMemo(() => {
+    return [...sessions].sort((a, b) => {
+        let aValue: number, bValue: number;
+
+        switch(sortConfig.key) {
+            case 'videoCount':
+                aValue = parseInt(a.channelInfo.videoCount, 10);
+                bValue = parseInt(b.channelInfo.videoCount, 10);
+                break;
+            case 'subscriberCount':
+                aValue = parseInt(a.channelInfo.subscriberCount, 10);
+                bValue = parseInt(b.channelInfo.subscriberCount, 10);
+                break;
+            case 'savedAt':
+            default:
+                aValue = new Date(a.savedAt).getTime();
+                bValue = new Date(b.savedAt).getTime();
+                break;
+        }
+
+        if (aValue < bValue) {
+            return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+            return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+    });
+  }, [sessions, sortConfig]);
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 transition-opacity duration-300" onClick={onClose}>
-      <div className="bg-[#24283b] rounded-lg shadow-2xl p-6 w-full max-w-2xl flex flex-col" style={{ height: '70vh' }} onClick={(e) => e.stopPropagation()}>
-        <div className="flex justify-between items-center mb-6">
+      <div className="bg-[#24283b] rounded-lg shadow-2xl p-6 w-full max-w-3xl flex flex-col" style={{ height: '80vh' }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-2">
           <h2 className="text-xl font-bold text-white">Thư viện phiên làm việc</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none" title="Đóng cửa sổ">&times;</button>
         </div>
 
+        <div className="flex items-center justify-end mb-4 text-sm">
+            <label htmlFor="sort-key" className="text-gray-400 mr-2">Sắp xếp:</label>
+            <select
+                id="sort-key"
+                value={sortConfig.key}
+                onChange={e => setSortConfig(c => ({ ...c, key: e.target.value as SortKey }))}
+                className="bg-[#2d303e] border border-gray-600 rounded-md px-2 py-1 text-white focus:ring-1 focus:ring-blue-500 outline-none"
+            >
+                <option value="savedAt">Ngày lưu</option>
+                <option value="videoCount">Số video</option>
+                <option value="subscriberCount">Lượt subscribers</option>
+            </select>
+            <button
+                onClick={() => setSortConfig(c => ({ ...c, direction: c.direction === 'desc' ? 'asc' : 'desc' }))}
+                className="p-1.5 ml-2 bg-gray-700 hover:bg-gray-600 rounded-md text-white"
+                title={sortConfig.direction === 'desc' ? 'Sắp xếp tăng dần' : 'Sắp xếp giảm dần'}
+            >
+                {sortConfig.direction === 'desc' ? <SortDescIcon className="w-4 h-4" /> : <SortAscIcon className="w-4 h-4" />}
+            </button>
+        </div>
+
         <div className="flex-grow overflow-y-auto pr-2 space-y-3">
-          {sessions.length > 0 ? (
-            sessions
-              .sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime())
-              .map(session => (
+          {sortedSessions.length > 0 ? (
+            sortedSessions.map(session => (
               <div key={session.id} className="flex items-center bg-[#2d303e] p-3 rounded-lg">
                 <img src={session.channelInfo.thumbnail} alt={session.channelInfo.title} className="w-16 h-16 rounded-full mr-4" />
                 <div className="flex-grow">
@@ -135,6 +193,24 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
                 </div>
                 <div className="flex items-center space-x-2">
                     <button 
+                        onClick={() => onUpdate(session.id)}
+                        disabled={!!updatingSessionId}
+                        className="flex items-center justify-center bg-cyan-600 hover:bg-cyan-700 text-white font-semibold text-sm py-2 px-4 rounded-md transition-colors disabled:opacity-50"
+                        title="Làm mới dữ liệu cho kênh này từ YouTube"
+                    >
+                        {updatingSessionId === session.id ? (
+                            <>
+                                <SpinnerIcon className="w-4 h-4 mr-2 animate-spin" />
+                                <span>Cập nhật...</span>
+                            </>
+                        ) : (
+                            <>
+                                <ArrowPathIcon className="w-4 h-4 mr-2" />
+                                <span>Cập nhật</span>
+                            </>
+                        )}
+                    </button>
+                    <button 
                         onClick={() => onLoad(session.id)}
                         className={`bg-${theme}-600 hover:bg-${theme}-700 text-white font-semibold text-sm py-2 px-4 rounded-md transition-colors`}
                         title="Tải lại phiên làm việc này vào giao diện chính"
@@ -143,7 +219,7 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
                     </button>
                     <button 
                         onClick={() => onDelete(session.id)}
-                        className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-md transition-colors"
+                        className="bg-red-800 hover:bg-red-900 text-white p-2.5 rounded-md transition-colors"
                         title="Xóa vĩnh viễn phiên làm việc này"
                     >
                         <TrashIcon className="w-5 h-5" />
