@@ -122,17 +122,26 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
   };
 
   const sortedSessions = useMemo(() => {
-    // Robustly filter out any sessions that are null/undefined or missing essential data to prevent crashes.
+    // Safety check: Ensure `sessions` is an array before proceeding.
+    if (!Array.isArray(sessions)) {
+        console.error("LibraryModal received a non-array value for sessions:", sessions);
+        return [];
+    }
+
+    // Robustly filter out any sessions that are null, undefined, or missing essential data to prevent crashes.
     const validSessions = sessions.filter(s => 
       s && 
+      typeof s.id === 'string' &&
       s.channelInfo && 
       typeof s.channelInfo.title === 'string' &&
       typeof s.channelInfo.thumbnail === 'string' &&
+      typeof s.channelInfo.videoCount === 'string' &&
+      typeof s.channelInfo.subscriberCount === 'string' &&
       Array.isArray(s.videos) &&
       typeof s.savedAt === 'string'
     );
 
-    return validSessions.sort((a, b) => {
+    return [...validSessions].sort((a, b) => {
         let aValue: number, bValue: number;
 
         switch(sortConfig.key) {

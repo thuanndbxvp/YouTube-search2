@@ -121,6 +121,20 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
     const [validationError, setValidationError] = useState<string | null>(null);
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'savedAt', direction: 'desc' });
 
+    // FIX: Filter out corrupted sessions from localStorage to prevent crashes.
+    const validSessions = useMemo(() => {
+        return sessions.filter(s =>
+            s &&
+            s.id &&
+            s.savedAt &&
+            s.channelInfo &&
+            s.channelInfo.id &&
+            s.channelInfo.title &&
+            s.channelInfo.subscriberCount &&
+            s.channelInfo.videoCount
+        );
+    }, [sessions]);
+
 
     useEffect(() => {
         if (isOpen && !analysisState.isLoading && !analysisState.isComplete) {
@@ -132,24 +146,24 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
 
     const totalSelectedVideos = useMemo(() => {
         if (selectedChannelIds.length === 0) return 0;
-        return sessions
+        return validSessions // Use filtered list
             .filter(s => selectedChannelIds.includes(s.id))
             .reduce((total, session) => total + parseInt(session.channelInfo.videoCount || '0', 10), 0);
-    }, [selectedChannelIds, sessions]);
+    }, [selectedChannelIds, validSessions]); // Dependency on filtered list
 
     const sortedSessions = useMemo(() => {
-        return [...sessions].sort((a, b) => {
+        return [...validSessions].sort((a, b) => { // Use filtered list
             let aValue: string | number;
             let bValue: string | number;
 
             switch(sortConfig.key) {
                 case 'videoCount':
-                    aValue = parseInt(a.channelInfo.videoCount, 10);
-                    bValue = parseInt(b.channelInfo.videoCount, 10);
+                    aValue = parseInt(a.channelInfo.videoCount, 10) || 0;
+                    bValue = parseInt(b.channelInfo.videoCount, 10) || 0;
                     break;
                 case 'subscriberCount':
-                    aValue = parseInt(a.channelInfo.subscriberCount, 10);
-                    bValue = parseInt(b.channelInfo.subscriberCount, 10);
+                    aValue = parseInt(a.channelInfo.subscriberCount, 10) || 0;
+                    bValue = parseInt(b.channelInfo.subscriberCount, 10) || 0;
                     break;
                 case 'title':
                     aValue = a.channelInfo.title.toLowerCase();
@@ -170,7 +184,7 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
             }
             return 0;
         });
-    }, [sessions, sortConfig]);
+    }, [validSessions, sortConfig]); // Dependency on filtered list
 
 
     const handleChannelSelection = (channelId: string) => {
