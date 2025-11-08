@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { SavedSession, StoredConfig, Theme } from '../types';
-import { SpinnerIcon, ChartBarIcon, DownloadIcon, ClipboardCopyIcon, UsersIcon, VideoCameraIcon, SparklesIcon, SortAscIcon, SortDescIcon } from './Icons';
+import { SpinnerIcon, ChartBarIcon, DownloadIcon, ClipboardCopyIcon, UsersIcon, VideoCameraIcon, SparklesIcon, SortAscIcon, SortDescIcon, ClockIcon } from './Icons';
 import { formatNumber, formatNumberShort } from '../utils/formatters';
 
 interface CompetitiveAnalysisModalProps {
@@ -26,6 +26,8 @@ interface SortConfig {
   key: SortKey;
   direction: SortDirection;
 }
+
+const formatShortDate = (dateString: string) => new Date(dateString).toLocaleDateString('vi-VN');
 
 
 const parseAndRenderAnalysis = (markdown: string, theme: Theme): React.ReactNode[] => {
@@ -332,6 +334,10 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
                                         <span className="text-sm text-gray-300 truncate" title={s.channelInfo.title}>{s.channelInfo.title}</span>
                                     </div>
                                     <div className="flex items-center space-x-4 text-xs text-gray-400 flex-shrink-0">
+                                        <div className="flex items-center" title="Ngày lưu">
+                                            <ClockIcon className="w-4 h-4 mr-1.5" />
+                                            <span>{formatShortDate(s.savedAt)}</span>
+                                        </div>
                                         <div className="flex items-center" title="Người đăng ký">
                                             <UsersIcon className="w-4 h-4 mr-1.5" />
                                             <span>{formatNumberShort(s.channelInfo.subscriberCount)}</span>
