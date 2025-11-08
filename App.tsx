@@ -6,7 +6,7 @@ import { ChannelInputForm } from './components/ChannelInputForm';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { Video, ChannelInfo, StoredConfig, SavedSession, ChatMessage, Theme, AiProvider } from './types';
 import { getChannelInfoByUrl, fetchVideosPage } from './services/youtubeService';
-import { generateTranscriptWithGemini } from './services/geminiService';
+import { generateTranscriptWithGemini, performCompetitiveAnalysis } from './services/geminiService';
 import { generateTranscriptWithOpenAI } from './services/openaiService';
 import { VideoTable } from './components/VideoTable';
 import { KeywordAnalysis } from './components/KeywordAnalysis';
@@ -33,6 +33,59 @@ const initialTranscriptState = {
     error: null as string | null,
     currentVideoId: null as string | null,
 };
+
+const analysisInstructions = `{
+  "task": "YouTube Channel Competitive Analysis",
+  "language": "Vietnamese",
+  "input": {
+    "file_type": "CSV data from app",
+    "file_description": "Each row represents one video from a competitor channel. Columns include Channel name, Video title, Publish date, View count, Duration, Likes, etc."
+  },
+  "objectives": [
+    "1. Clean and normalize data fields.",
+    "2. Compute derived metrics: Views per Day (VPD), duration buckets.",
+    "3. Identify top-performing videos by absolute views and by Views per Day across all channels.",
+    "4. Detect recurring successful title patterns (numbers, exclamations, 'Top X', questions, etc.).",
+    "5. Extract high-lift keywords and bigrams from video titles.",
+    "6. Determine the most effective posting hours and weekdays.",
+    "7. Summarize per-channel performance metrics (median VPD, Shorts share, median duration).",
+    "8. Provide actionable insights: what makes high-performing videos stand out and how to replicate success."
+  ],
+  "expected_outputs": {
+    "text_summary": [
+      "Top performing channels (by total views, median VPD).",
+      "Optimal video duration group.",
+      "Best posting time windows.",
+      "Title/keyword patterns with the highest lift.",
+      "Insights explaining why high-performing videos work.",
+      "Strategic recommendations for future content themes and structure."
+    ]
+  },
+  "key_metrics": [
+    "views_per_day", "median_views", "median_vpd", "shorts_share", "median_duration_sec", "pattern_lift", "keyword_lift"
+  ],
+  "analysis_notes": [
+    "Use lift ratio (top 20% vs rest) for detecting patterns.",
+    "Perform keyword extraction in Vietnamese."
+  ],
+  "expected_style_of_summary": {
+    "tone": "Professional, analytical, data-driven, similar to consulting report, in Vietnamese.",
+    "sections": [
+      "1. Tóm tắt cho Lãnh đạo (Executive Summary)",
+      "2. Tổng quan Hiệu suất các Kênh (Channel Performance Overview)",
+      "3. Phân tích Nội dung & Tiêu đề (Content & Title Analysis)",
+      "4. Phân tích Thời gian & Thời lượng (Time & Duration Analysis)",
+      "5. Các insight chính (Key Insights)",
+      "6. Đề xuất Chiến lược (Xây dựng Kênh Mới): Dựa trên tất cả phân tích, hãy đề xuất một kế hoạch chi tiết để xây dựng một kênh mới thành công trong cùng ngách này. Tập trung vào các yếu tố khác biệt, lịch trình đăng bài, định dạng video và chiến lược tăng trưởng ban đầu."
+    ]
+  },
+  "output_format": {
+    "type": "text",
+    "parts": [
+      "C. Written summary in Markdown format (in Vietnamese)"
+    ]
+  }
+}`;
 
 interface ChannelQueueListProps {
   queue: string[];
@@ -204,6 +257,13 @@ export default function App() {
   const [currentlyAnalyzingUrl, setCurrentlyAnalyzingUrl] = useState<string | null>(null);
 
   const [transcriptModalState, setTranscriptModalState] = useState(initialTranscriptState);
+
+  const [analysisState, setAnalysisState] = useState({
+    isLoading: false,
+    error: null as string | null,
+    result: '',
+    isComplete: false,
+  });
   
   useEffect(() => {
       const oldConfig = appConfig as any;
@@ -523,6 +583,65 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
       }
   };
 
+  const handleStartCompetitiveAnalysis = async (selectedChannelIds: string[]) => {
+      if (selectedChannelIds.length < 2) return;
+
+      if (appConfig.aiProvider !== 'gemini') {
+        setAnalysisState({
+          isLoading: false,
+          error: 'Tính năng này yêu cầu chọn một model của Gemini trong cài đặt API.',
+          result: '',
+          isComplete: true,
+        });
+        return;
+      }
+      
+      setAnalysisState({ isLoading: true, error: null, result: '', isComplete: false });
+
+      try {
+        const selectedSessions = savedSessions.filter(s => selectedChannelIds.includes(s.id));
+
+        const headers = ["Channel Name", "Video Title", "Publish Date", "View Count", "Likes", "Duration (ISO 8601)"];
+        const rows = selectedSessions.flatMap(session => 
+            session.videos.map(video => [
+                `"${session.channelInfo.title.replace(/"/g, '""')}"`,
+                `"${video.snippet.title.replace(/"/g, '""')}"`,
+                video.snippet.publishedAt,
+                video.statistics.viewCount || '0',
+                video.statistics.likeCount || '0',
+                video.contentDetails.duration || 'PT0S'
+            ].join(','))
+        );
+        const csvData = [headers.join(','), ...rows].join('\n');
+        
+        const result = await performCompetitiveAnalysis(
+            appConfig.gemini.key,
+            appConfig.aiModel,
+            csvData,
+            analysisInstructions
+        );
+
+        setAnalysisState({ isLoading: false, error: null, result: result, isComplete: true });
+
+      } catch (err) {
+        setAnalysisState({ 
+          isLoading: false, 
+          error: err instanceof Error ? err.message : 'Đã xảy ra lỗi không xác định.', 
+          result: '', 
+          isComplete: true 
+        });
+      }
+  };
+
+  const handleCloseCompetitiveAnalysisModal = () => {
+    setIsCompetitiveAnalysisModalOpen(false);
+    if (analysisState.isComplete) {
+      setTimeout(() => {
+        setAnalysisState({ isLoading: false, error: null, result: '', isComplete: false });
+      }, 300);
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-[#1a1b26] text-[#a9b1d6] font-sans">
@@ -544,10 +663,12 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
       />
       <CompetitiveAnalysisModal
         isOpen={isCompetitiveAnalysisModalOpen}
-        onClose={() => setIsCompetitiveAnalysisModalOpen(false)}
+        onClose={handleCloseCompetitiveAnalysisModal}
         sessions={savedSessions}
         appConfig={appConfig}
         theme={appConfig.theme}
+        onStartAnalysis={handleStartCompetitiveAnalysis}
+        analysisState={analysisState}
       />
       <TranscriptModal 
         isOpen={transcriptModalState.isOpen}
@@ -569,6 +690,7 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
             setAppConfig={setAppConfig}
             onCompetitiveAnalysisClick={() => setIsCompetitiveAnalysisModalOpen(true)}
             isCompetitiveAnalysisAvailable={savedSessions.length >= 2}
+            analysisState={analysisState}
         />
         <main className="mt-8">
           <ChannelInputForm onSubmit={handleQueueSubmit} isLoading={!!currentlyAnalyzingUrl} theme={appConfig.theme} />

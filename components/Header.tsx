@@ -1,6 +1,5 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { BookmarkIcon, LibraryIcon, KeyIcon, YouTubeIcon, ChartBarIcon } from './Icons';
+import { BookmarkIcon, LibraryIcon, KeyIcon, YouTubeIcon, ChartBarIcon, SpinnerIcon } from './Icons';
 import { StoredConfig, Theme } from '../types';
 
 interface HeaderProps {
@@ -13,6 +12,10 @@ interface HeaderProps {
     setAppConfig: React.Dispatch<React.SetStateAction<StoredConfig>>;
     onCompetitiveAnalysisClick: () => void;
     isCompetitiveAnalysisAvailable: boolean;
+    analysisState: {
+        isLoading: boolean;
+        isComplete: boolean;
+    };
 }
 
 const themes: Theme[] = ['blue', 'green', 'orange', 'red', 'purple'];
@@ -31,7 +34,7 @@ const PaintBrushIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 
-export const Header: React.FC<HeaderProps> = ({ onApiClick, onLibraryClick, onSaveSession, isSessionSavable, saveStatus, theme, setAppConfig, onCompetitiveAnalysisClick, isCompetitiveAnalysisAvailable }) => {
+export const Header: React.FC<HeaderProps> = ({ onApiClick, onLibraryClick, onSaveSession, isSessionSavable, saveStatus, theme, setAppConfig, onCompetitiveAnalysisClick, isCompetitiveAnalysisAvailable, analysisState }) => {
     const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false);
     const themeDropdownRef = useRef<HTMLDivElement>(null);
     
@@ -118,15 +121,27 @@ export const Header: React.FC<HeaderProps> = ({ onApiClick, onLibraryClick, onSa
                     <LibraryIcon className="w-4 h-4 mr-1.5" />
                     Thư viện
                 </button>
-                <button
-                    onClick={onCompetitiveAnalysisClick}
-                    disabled={!isCompetitiveAnalysisAvailable}
-                    title={!isCompetitiveAnalysisAvailable ? "Cần ít nhất 2 kênh đã lưu để phân tích đối thủ" : "Phân tích đối thủ"}
-                    className="flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-1.5 px-3 rounded-md transition-colors duration-200 disabled:opacity-50"
-                >
-                    <ChartBarIcon className="w-4 h-4 mr-1.5" />
-                    Đối thủ
-                </button>
+                <div className="relative">
+                    <button
+                        onClick={onCompetitiveAnalysisClick}
+                        disabled={!isCompetitiveAnalysisAvailable && !analysisState.isLoading}
+                        title={!isCompetitiveAnalysisAvailable ? "Cần ít nhất 2 kênh đã lưu để phân tích đối thủ" : "Phân tích đối thủ"}
+                        className="flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-1.5 px-3 rounded-md transition-colors duration-200 disabled:opacity-50"
+                    >
+                        {analysisState.isLoading ? (
+                            <SpinnerIcon className="w-4 h-4 mr-1.5 animate-spin" />
+                        ) : (
+                            <ChartBarIcon className="w-4 h-4 mr-1.5" />
+                        )}
+                        {analysisState.isLoading ? 'Đang phân tích...' : 'Đối thủ'}
+                    </button>
+                    {analysisState.isComplete && !analysisState.isLoading && (
+                        <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                        </span>
+                    )}
+                </div>
                 <button 
                     onClick={onApiClick} 
                     title="Quản lý API Keys"
