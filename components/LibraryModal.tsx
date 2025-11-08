@@ -122,17 +122,20 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
   };
 
   const sortedSessions = useMemo(() => {
-    return [...sessions].sort((a, b) => {
+    // Filter out any sessions that are null/undefined or missing essential 'channelInfo' to prevent crashes.
+    const validSessions = sessions.filter(s => s && s.channelInfo);
+
+    return validSessions.sort((a, b) => {
         let aValue: number, bValue: number;
 
         switch(sortConfig.key) {
             case 'videoCount':
-                aValue = parseInt(a.channelInfo.videoCount, 10);
-                bValue = parseInt(b.channelInfo.videoCount, 10);
+                aValue = parseInt(a.channelInfo.videoCount, 10) || 0;
+                bValue = parseInt(b.channelInfo.videoCount, 10) || 0;
                 break;
             case 'subscriberCount':
-                aValue = parseInt(a.channelInfo.subscriberCount, 10);
-                bValue = parseInt(b.channelInfo.subscriberCount, 10);
+                aValue = parseInt(a.channelInfo.subscriberCount, 10) || 0;
+                bValue = parseInt(b.channelInfo.subscriberCount, 10) || 0;
                 break;
             case 'savedAt':
             default:
@@ -140,6 +143,10 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
                 bValue = new Date(b.savedAt).getTime();
                 break;
         }
+
+        // Handle cases where parsing might result in NaN
+        if (isNaN(aValue)) aValue = 0;
+        if (isNaN(bValue)) bValue = 0;
 
         if (aValue < bValue) {
             return sortConfig.direction === 'asc' ? -1 : 1;
