@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { BookmarkIcon, LibraryIcon, KeyIcon, YouTubeIcon, ChartBarIcon, SpinnerIcon } from './Icons';
+import { BookmarkIcon, LibraryIcon, KeyIcon, YouTubeIcon, ChartBarIcon, SpinnerIcon, TrashIcon } from './Icons';
 import { StoredConfig, Theme } from '../types';
 
 interface HeaderProps {
@@ -61,6 +61,13 @@ export const Header: React.FC<HeaderProps> = ({ onApiClick, onLibraryClick, onSa
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, []);
+
+    const handleClearCache = () => {
+        if (window.confirm('Bạn có chắc chắn muốn xóa toàn bộ dữ liệu đã lưu (bao gồm API keys và các phiên đã lưu trong thư viện) không? Hành động này không thể hoàn tác.')) {
+            window.localStorage.clear();
+            window.location.reload();
+        }
+    };
     
     return (
         <header className="flex flex-col items-center text-center py-2">
@@ -148,6 +155,13 @@ export const Header: React.FC<HeaderProps> = ({ onApiClick, onLibraryClick, onSa
                     className="flex items-center justify-center bg-gray-700 hover:bg-gray-800 text-white text-sm font-semibold py-1.5 px-3 rounded-md transition-colors duration-200">
                     <KeyIcon className="w-4 h-4 mr-1.5" />
                     API
+                </button>
+                <button 
+                    onClick={handleClearCache} 
+                    title="Xóa toàn bộ dữ liệu cục bộ của ứng dụng (API Keys, Thư viện, v.v.)"
+                    className="flex items-center justify-center bg-red-800 hover:bg-red-900 text-white text-sm font-semibold py-1.5 px-3 rounded-md transition-colors duration-200">
+                    <TrashIcon className="w-4 h-4 mr-1.5" />
+                    Xóa Cache
                 </button>
             </div>
         </header>

@@ -122,8 +122,15 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
   };
 
   const sortedSessions = useMemo(() => {
-    // Filter out any sessions that are null/undefined or missing essential 'channelInfo' to prevent crashes.
-    const validSessions = sessions.filter(s => s && s.channelInfo);
+    // Robustly filter out any sessions that are null/undefined or missing essential data to prevent crashes.
+    const validSessions = sessions.filter(s => 
+      s && 
+      s.channelInfo && 
+      typeof s.channelInfo.title === 'string' &&
+      typeof s.channelInfo.thumbnail === 'string' &&
+      Array.isArray(s.videos) &&
+      typeof s.savedAt === 'string'
+    );
 
     return validSessions.sort((a, b) => {
         let aValue: number, bValue: number;
