@@ -19,6 +19,91 @@ interface CompetitiveAnalysisModalProps {
   onResetAnalysis: () => void;
 }
 
+const parseAndRenderAnalysis = (markdown: string, theme: Theme): React.ReactNode[] => {
+    const elements: React.ReactNode[] = [];
+    if (!markdown) return elements;
+    
+    const lines = markdown.split('\n');
+
+    const renderText = (text: string) => {
+        const html = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        return <span dangerouslySetInnerHTML={{ __html: html }} />;
+    };
+
+    let i = 0;
+    while (i < lines.length) {
+        const line = lines[i];
+
+        if (line.startsWith('# ')) {
+            elements.push(<h1 key={i} className={`text-2xl font-bold mt-8 mb-4 text-${theme}-200 border-b-2 border-${theme}-500 pb-2`}>{renderText(line.substring(2))}</h1>);
+            i++;
+            continue;
+        }
+        if (line.startsWith('## ')) {
+            elements.push(<h2 key={i} className={`text-xl font-bold mt-6 mb-3 text-${theme}-300`}>{renderText(line.substring(3))}</h2>);
+            i++;
+            continue;
+        }
+
+        if (line.startsWith('|') && line.includes('|')) {
+            const tableLines = [];
+            while (i < lines.length && lines[i].startsWith('|') && lines[i].includes('|')) {
+                tableLines.push(lines[i]);
+                i++;
+            }
+
+            if (tableLines.length > 1) {
+                const headerLine = tableLines[0];
+                const separatorLine = tableLines[1];
+                
+                if (separatorLine.includes('---')) {
+                    const headers = headerLine.split('|').map(h => h.trim()).slice(1, -1);
+                    const rows = tableLines.slice(2);
+
+                    elements.push(
+                        <div key={`table-wrapper-${i}`} className="overflow-x-auto my-4">
+                            <table className="w-full border-collapse text-sm">
+                                <thead className="bg-[#1a1b26]">
+                                    <tr>
+                                        {headers.map((header, index) => (
+                                            <th key={index} className="border border-gray-600 p-3 font-semibold text-left text-gray-200">{renderText(header)}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {rows.map((row, rowIndex) => {
+                                        const cells = row.split('|').map(c => c.trim()).slice(1, -1);
+                                        return (
+                                            <tr key={rowIndex} className="bg-[#2d303e] odd:bg-[#24283b] border-t border-gray-600">
+                                                {cells.map((cell, cellIndex) => (
+                                                    <td key={cellIndex} className="border border-gray-600 p-3 text-gray-300 align-top">{renderText(cell)}</td>
+                                                ))}
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    );
+                } else {
+                    tableLines.forEach((tl, idx) => elements.push(<p key={`${i}-${idx}`} className="my-1 leading-relaxed">{renderText(tl)}</p>));
+                }
+            } else {
+                tableLines.forEach((tl, idx) => elements.push(<p key={`${i}-${idx}`} className="my-1 leading-relaxed">{renderText(tl)}</p>));
+            }
+            continue;
+        }
+
+        if (line.trim()) {
+            elements.push(<p key={i} className="my-2 leading-relaxed">{renderText(line)}</p>);
+        }
+
+        i++;
+    }
+
+    return elements;
+};
+
 export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> = ({ isOpen, onClose, sessions, appConfig, theme, onStartAnalysis, analysisState, onResetAnalysis }) => {
     const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
     const [selectedChannelIds, setSelectedChannelIds] = useState<string[]>([]);
@@ -125,8 +210,8 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
                                         <DownloadIcon className="w-5 h-5" />
                                     </button>
                                 </div>
-                                <div className="text-sm text-gray-200 bg-[#1a1b26] p-4 rounded-lg whitespace-pre-wrap leading-relaxed">
-                                    {analysisState.result}
+                                <div className="text-sm text-gray-200 bg-[#1a1b26] p-4 rounded-lg leading-relaxed">
+                                    {parseAndRenderAnalysis(analysisState.result, theme)}
                                 </div>
                             </div>
                         )}
@@ -216,7 +301,13 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 transition-opacity duration-300" onClick={onClose}>
-            <div className="bg-[#24283b] rounded-lg shadow-2xl p-6 w-full max-w-2xl flex flex-col" style={{ height: '85vh' }} onClick={(e) => e.stopPropagation()}>
+            <div
+                className={`bg-[#24283b] rounded-lg shadow-2xl p-6 w-full flex flex-col transition-all duration-300 ease-in-out ${
+                    analysisState.isLoading || analysisState.isComplete ? 'max-w-5xl' : 'max-w-2xl'
+                }`}
+                style={{ height: '85vh' }}
+                onClick={(e) => e.stopPropagation()}
+            >
                 <div className="flex justify-between items-center mb-4 flex-shrink-0">
                     <h2 className="text-xl font-bold text-white">Báo cáo Phân tích Đối thủ</h2>
                     <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
