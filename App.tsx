@@ -635,11 +635,10 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
 
   const handleCloseCompetitiveAnalysisModal = () => {
     setIsCompetitiveAnalysisModalOpen(false);
-    if (analysisState.isComplete) {
-      setTimeout(() => {
-        setAnalysisState({ isLoading: false, error: null, result: '', isComplete: false });
-      }, 300);
-    }
+  };
+
+  const handleResetCompetitiveAnalysis = () => {
+    setAnalysisState({ isLoading: false, error: null, result: '', isComplete: false });
   };
 
 
@@ -669,6 +668,7 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
         theme={appConfig.theme}
         onStartAnalysis={handleStartCompetitiveAnalysis}
         analysisState={analysisState}
+        onResetAnalysis={handleResetCompetitiveAnalysis}
       />
       <TranscriptModal 
         isOpen={transcriptModalState.isOpen}

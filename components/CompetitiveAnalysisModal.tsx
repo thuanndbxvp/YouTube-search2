@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { SavedSession, StoredConfig, Theme } from '../types';
-import { SpinnerIcon, ChartBarIcon, DownloadIcon, ClipboardCopyIcon, UsersIcon, VideoCameraIcon } from './Icons';
+import { SpinnerIcon, ChartBarIcon, DownloadIcon, ClipboardCopyIcon, UsersIcon, VideoCameraIcon, SparklesIcon } from './Icons';
 import { formatNumber, formatNumberShort } from '../utils/formatters';
 
 interface CompetitiveAnalysisModalProps {
@@ -16,9 +16,10 @@ interface CompetitiveAnalysisModalProps {
     result: string;
     isComplete: boolean;
   };
+  onResetAnalysis: () => void;
 }
 
-export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> = ({ isOpen, onClose, sessions, appConfig, theme, onStartAnalysis, analysisState }) => {
+export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> = ({ isOpen, onClose, sessions, appConfig, theme, onStartAnalysis, analysisState, onResetAnalysis }) => {
     const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
     const [selectedChannelIds, setSelectedChannelIds] = useState<string[]>([]);
     const [validationError, setValidationError] = useState<string | null>(null);
@@ -97,31 +98,48 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
             );
         }
 
-        if (analysisState.isComplete && analysisState.error) {
+        if (analysisState.isComplete) {
             return (
-                <div className="text-center py-16 flex-grow flex flex-col justify-center">
-                    <p className="text-red-400 font-semibold">Đã xảy ra lỗi:</p>
-                    <p className="mt-2 text-sm bg-red-900/50 p-3 rounded-md">{analysisState.error}</p>
-                </div>
-            );
-        }
-        
-        if (analysisState.isComplete && analysisState.result) {
-             return (
-                <div className="flex-grow overflow-y-auto pr-2 relative">
-                    <div className="absolute top-0 right-2 flex space-x-2 z-10">
-                        <button onClick={handleCopy} className="p-1.5 bg-gray-600 hover:bg-gray-500 rounded-md text-white relative" title="Sao chép">
-                            <ClipboardCopyIcon className="w-5 h-5"/>
-                            {copyStatus === 'copied' && <span className="absolute -bottom-7 left-1/2 -translate-x-1/2 bg-green-600 text-white text-xs px-2 py-0.5 rounded-md">Đã chép!</span>}
+                <>
+                    <div className="flex-grow flex flex-col min-h-0">
+                        {analysisState.error ? (
+                            <div className="text-center py-16 flex-grow flex flex-col justify-center">
+                                <p className="text-red-400 font-semibold">Đã xảy ra lỗi:</p>
+                                <p className="mt-2 text-sm bg-red-900/50 p-3 rounded-md">{analysisState.error}</p>
+                            </div>
+                        ) : (
+                            <div className="flex-grow overflow-y-auto pr-2 relative">
+                                <div className="absolute top-0 right-2 flex space-x-2 z-10">
+                                    <button onClick={handleCopy} className="p-1.5 bg-gray-600 hover:bg-gray-500 rounded-md text-white relative" title="Sao chép">
+                                        <ClipboardCopyIcon className="w-5 h-5"/>
+                                        {copyStatus === 'copied' && <span className="absolute -bottom-7 left-1/2 -translate-x-1/2 bg-green-600 text-white text-xs px-2 py-0.5 rounded-md">Đã chép!</span>}
+                                    </button>
+                                    <button onClick={handleDownload} className="p-1.5 bg-gray-600 hover:bg-gray-500 rounded-md text-white" title="Tải về (.doc)">
+                                        <DownloadIcon className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                <div className="text-sm text-gray-200 bg-[#1a1b26] p-4 rounded-lg whitespace-pre-wrap leading-relaxed">
+                                    {analysisState.result}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    <div className="pt-4 mt-4 border-t border-gray-700 flex-shrink-0 flex justify-between items-center">
+                        <button 
+                            onClick={onResetAnalysis}
+                            className={`flex items-center justify-center bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 text-sm`}
+                        >
+                            <SparklesIcon className="w-4 h-4 mr-2" />
+                            Tạo phiên mới
                         </button>
-                        <button onClick={handleDownload} className="p-1.5 bg-gray-600 hover:bg-gray-500 rounded-md text-white" title="Tải về (.doc)">
-                            <DownloadIcon className="w-5 h-5" />
+                        <button 
+                            onClick={onClose}
+                            className="bg-gray-600 hover:bg-gray-700 text-white font-semibold text-sm py-2 px-4 rounded-md transition-colors"
+                        >
+                            Đóng
                         </button>
                     </div>
-                    <div className="text-sm text-gray-200 bg-[#1a1b26] p-4 rounded-lg whitespace-pre-wrap leading-relaxed">
-                        {analysisState.result}
-                    </div>
-                </div>
+                </>
             );
         }
         
