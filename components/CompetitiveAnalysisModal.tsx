@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SavedSession, StoredConfig, Theme } from '../types';
 import { performCompetitiveAnalysis } from '../services/geminiService';
 import { SpinnerIcon, ChartBarIcon, DownloadIcon, ClipboardCopyIcon } from './Icons';
@@ -70,10 +70,33 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
     const [error, setError] = useState<string | null>(null);
     const [analysisResult, setAnalysisResult] = useState<string>('');
     const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
+    const [selectedChannelIds, setSelectedChannelIds] = useState<string[]>([]);
+
+    useEffect(() => {
+        if (isOpen) {
+            setSelectedChannelIds([]);
+            setAnalysisResult('');
+            setError(null);
+            setIsLoading(false);
+        }
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
+    const handleChannelSelection = (channelId: string) => {
+        setSelectedChannelIds(prev =>
+            prev.includes(channelId)
+                ? prev.filter(id => id !== channelId)
+                : [...prev, channelId]
+        );
+    };
+
     const handleStartAnalysis = async () => {
+        if (selectedChannelIds.length < 2) {
+            setError("Vui lòng chọn ít nhất 2 kênh để phân tích.");
+            return;
+        }
+
         setIsLoading(true);
         setError(null);
         setAnalysisResult('');
@@ -85,8 +108,10 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
         }
 
         try {
+            const selectedSessions = sessions.filter(s => selectedChannelIds.includes(s.id));
+
             const headers = ["Channel Name", "Video Title", "Publish Date", "View Count", "Likes", "Duration (ISO 8601)"];
-            const rows = sessions.flatMap(session => 
+            const rows = selectedSessions.flatMap(session => 
                 session.videos.map(video => [
                     `"${session.channelInfo.title.replace(/"/g, '""')}"`,
                     `"${video.snippet.title.replace(/"/g, '""')}"`,
@@ -126,7 +151,6 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
             "xmlns='http://www.w3.org/TR/REC-html40'>"+
             "<head><meta charset='utf-8'><title>Báo cáo Phân tích</title></head><body>";
         const htmlFooter = "</body></html>";
-        // Using a <pre> tag to maintain the markdown's whitespace and line breaks.
         const htmlContent = htmlHeader + '<pre style="white-space: pre-wrap; font-family: sans-serif;">' + analysisResult + '</pre>' + htmlFooter;
         
         const blob = new Blob(['\ufeff', htmlContent], {
@@ -189,19 +213,33 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
                 <ChartBarIcon className="w-16 h-16 mx-auto text-indigo-400" />
                 <h3 className="mt-4 text-lg font-semibold">Phân tích Đối thủ Cạnh tranh</h3>
                 <p className="mt-2 text-sm text-gray-400">
-                    Tính năng này sẽ tổng hợp dữ liệu từ tất cả các kênh bạn đã lưu trong thư viện để tạo ra một báo cáo phân tích so sánh do AI thực hiện.
+                    Chọn ít nhất 2 kênh từ thư viện của bạn để AI tạo ra một báo cáo phân tích so sánh chi tiết.
                 </p>
                 <div className="mt-6 bg-[#1a1b26] p-4 rounded-lg">
-                    <h4 className="font-semibold text-left">Các kênh sẽ được phân tích:</h4>
-                    <ul className="text-left mt-2 text-sm text-gray-300 list-disc list-inside space-y-1">
-                        {sessions.map(s => <li key={s.id}>{s.channelInfo.title}</li>)}
-                    </ul>
+                    <h4 className="font-semibold text-left mb-3">Chọn các kênh để phân tích:</h4>
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                        {sessions.map(s => (
+                            <label key={s.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-[#2d303e] transition-colors duration-200 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedChannelIds.includes(s.id)}
+                                    onChange={() => handleChannelSelection(s.id)}
+                                    className={`h-5 w-5 rounded bg-gray-700 border-gray-600 text-indigo-500 focus:ring-indigo-500 focus:ring-2 ring-offset-2 ring-offset-[#1a1b26]`}
+                                />
+                                <span className="text-sm text-gray-300">{s.channelInfo.title}</span>
+                            </label>
+                        ))}
+                    </div>
                 </div>
+                {selectedChannelIds.length > 0 && selectedChannelIds.length < 2 && (
+                    <p className="text-xs text-yellow-400 mt-3 text-left px-1">Vui lòng chọn thêm ít nhất {2 - selectedChannelIds.length} kênh nữa.</p>
+                )}
                 <button 
                     onClick={handleStartAnalysis}
-                    className={`mt-8 w-full flex items-center justify-center bg-${theme}-600 hover:bg-${theme}-700 text-white font-bold py-3 px-4 rounded-lg transition-colors`}
+                    disabled={isLoading || selectedChannelIds.length < 2}
+                    className={`mt-6 w-full flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                    Bắt đầu Phân tích
+                    Bắt đầu Phân tích ({selectedChannelIds.length})
                 </button>
             </div>
         );
@@ -209,7 +247,7 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 transition-opacity duration-300" onClick={onClose}>
-            <div className="bg-[#24283b] rounded-lg shadow-2xl p-6 w-full max-w-4xl flex flex-col" style={{ height: '85vh' }} onClick={(e) => e.stopPropagation()}>
+            <div className="bg-[#24283b] rounded-lg shadow-2xl p-6 w-full max-w-2xl flex flex-col" style={{ height: '85vh' }} onClick={(e) => e.stopPropagation()}>
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-bold text-white">Báo cáo Phân tích Đối thủ</h2>
                     <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
