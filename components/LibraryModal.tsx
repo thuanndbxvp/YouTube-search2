@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { SavedSession, Theme } from '../types';
-import { TrashIcon } from './Icons';
+import { TrashIcon, UsersIcon, VideoCameraIcon, ClockIcon, ArrowPathIcon, SpinnerIcon } from './Icons';
+import { formatNumber } from '../utils/formatters';
 
 interface LibraryModalProps {
   isOpen: boolean;
@@ -8,6 +9,8 @@ interface LibraryModalProps {
   sessions: SavedSession[];
   onLoad: (sessionId: string) => void;
   onDelete: (sessionId: string) => void;
+  onUpdate: (sessionId: string) => void;
+  updatingSessionId: string | null;
   theme: Theme;
 }
 
@@ -21,7 +24,7 @@ const formatDate = (dateString: string): string => {
     });
 };
 
-export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, sessions, onLoad, onDelete, theme }) => {
+export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, sessions, onLoad, onDelete, onUpdate, updatingSessionId, theme }) => {
 
   if (!isOpen) return null;
 
@@ -48,7 +51,7 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 transition-opacity duration-300" onClick={onClose}>
-      <div className="bg-[#24283b] rounded-lg shadow-2xl p-6 w-full max-w-3xl flex flex-col" style={{ height: '80vh' }} onClick={(e) => e.stopPropagation()}>
+      <div className="bg-[#24283b] rounded-lg shadow-2xl p-6 w-full max-w-4xl flex flex-col" style={{ height: '80vh' }} onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-white">Thư viện phiên làm việc</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none" title="Đóng cửa sổ">&times;</button>
@@ -61,9 +64,20 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
                 <img src={session.channelInfo.thumbnail} alt={session.channelInfo.title} className="w-16 h-16 rounded-full mr-4" />
                 <div className="flex-grow">
                     <h3 className={`font-bold text-${theme}-300`}>{session.channelInfo.title}</h3>
-                    <p className="text-xs text-gray-400 mt-1">
-                        {session.videos.length} video đã tải | Lần cuối lưu: {formatDate(session.savedAt)}
-                    </p>
+                    <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400 mt-2">
+                        <div className="flex items-center" title="Người đăng ký">
+                            <UsersIcon className="w-4 h-4 mr-1.5" />
+                            <span>{formatNumber(session.channelInfo.subscriberCount)} subs</span>
+                        </div>
+                        <div className="flex items-center" title="Số lượng video">
+                            <VideoCameraIcon className="w-4 h-4 mr-1.5" />
+                            <span>{formatNumber(session.channelInfo.videoCount)} videos</span>
+                        </div>
+                        <div className="flex items-center" title="Ngày lưu">
+                            <ClockIcon className="w-4 h-4 mr-1.5" />
+                            <span>Lưu: {formatDate(session.savedAt)}</span>
+                        </div>
+                    </div>
                 </div>
                 <div className="flex items-center space-x-2">
                     <button 
@@ -72,6 +86,22 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
                         title="Tải lại phiên làm việc này vào giao diện chính"
                     >
                         Tải lại
+                    </button>
+                    <button
+                        onClick={() => onUpdate(session.id)}
+                        disabled={!!updatingSessionId}
+                        className={`bg-cyan-600 hover:bg-cyan-700 text-white font-semibold text-sm py-2 px-4 rounded-md transition-colors flex items-center justify-center w-28
+                                  disabled:opacity-50 disabled:cursor-not-allowed`}
+                        title="Cập nhật dữ liệu mới nhất cho kênh này"
+                    >
+                        {updatingSessionId === session.id ? (
+                            <>
+                                <SpinnerIcon className="w-4 h-4 mr-2 animate-spin" />
+                                Đang...
+                            </>
+                        ) : (
+                            'Cập nhật'
+                        )}
                     </button>
                     <button 
                         onClick={() => onDelete(session.id)}
