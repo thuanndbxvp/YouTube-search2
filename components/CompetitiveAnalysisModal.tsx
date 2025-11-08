@@ -81,7 +81,6 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
         }
     }, [isOpen]);
 
-    if (!isOpen) return null;
 
     const handleChannelSelection = (channelId: string) => {
         setSelectedChannelIds(prev =>
@@ -168,93 +167,92 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
         URL.revokeObjectURL(url);
     };
 
+    if (!isOpen) return null;
 
-    const renderContent = () => {
-        if (isLoading) {
-            return (
-                <div className="text-center py-16">
-                    <SpinnerIcon className="w-12 h-12 text-indigo-400 animate-spin mx-auto" />
-                    <p className="mt-4 text-lg">AI đang phân tích dữ liệu...</p>
-                    <p className="text-sm text-gray-400">Quá trình này có thể mất vài phút tùy thuộc vào lượng dữ liệu.</p>
-                </div>
-            );
-        }
-
-        if (error) {
-            return (
-                <div className="text-center py-16">
-                    <p className="text-red-400">Đã xảy ra lỗi:</p>
-                    <p className="mt-2 text-sm bg-red-900/50 p-3 rounded-md">{error}</p>
-                </div>
-            );
-        }
-
-        if (analysisResult) {
-            return (
-                <div className="relative">
-                    <div className="absolute top-0 right-0 flex space-x-2">
-                        <button onClick={handleCopy} className="p-1.5 bg-gray-600 hover:bg-gray-500 rounded-md text-white" title="Sao chép">
-                            <ClipboardCopyIcon className="w-5 h-5"/>
-                            {copyStatus === 'copied' && <span className="absolute -top-6 -right-2 bg-green-600 text-white text-xs px-2 py-0.5 rounded-md">Đã chép!</span>}
-                        </button>
-                        <button onClick={handleDownload} className="p-1.5 bg-gray-600 hover:bg-gray-500 rounded-md text-white" title="Tải về (.doc)">
-                            <DownloadIcon className="w-5 h-5" />
-                        </button>
-                    </div>
-                    <div className="text-sm text-gray-200 bg-[#1a1b26] p-4 rounded-lg whitespace-pre-wrap leading-relaxed">
-                        {analysisResult}
-                    </div>
-                </div>
-            );
-        }
-
-        return (
-             <div className="text-center">
-                <ChartBarIcon className="w-16 h-16 mx-auto text-indigo-400" />
-                <h3 className="mt-4 text-lg font-semibold">Phân tích Đối thủ Cạnh tranh</h3>
-                <p className="mt-2 text-sm text-gray-400">
-                    Chọn ít nhất 2 kênh từ thư viện của bạn để AI tạo ra một báo cáo phân tích so sánh chi tiết.
-                </p>
-                <div className="mt-6 bg-[#1a1b26] p-4 rounded-lg">
-                    <h4 className="font-semibold text-left mb-3">Chọn các kênh để phân tích:</h4>
-                    <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
-                        {sessions.map(s => (
-                            <label key={s.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-[#2d303e] transition-colors duration-200 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={selectedChannelIds.includes(s.id)}
-                                    onChange={() => handleChannelSelection(s.id)}
-                                    className={`h-5 w-5 rounded bg-gray-700 border-gray-600 text-indigo-500 focus:ring-indigo-500 focus:ring-2 ring-offset-2 ring-offset-[#1a1b26]`}
-                                />
-                                <span className="text-sm text-gray-300">{s.channelInfo.title}</span>
-                            </label>
-                        ))}
-                    </div>
-                </div>
-                {selectedChannelIds.length > 0 && selectedChannelIds.length < 2 && (
-                    <p className="text-xs text-yellow-400 mt-3 text-left px-1">Vui lòng chọn thêm ít nhất {2 - selectedChannelIds.length} kênh nữa.</p>
-                )}
-                <button 
-                    onClick={handleStartAnalysis}
-                    disabled={isLoading || selectedChannelIds.length < 2}
-                    className={`mt-6 w-full flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
-                >
-                    Bắt đầu Phân tích ({selectedChannelIds.length})
-                </button>
-            </div>
-        );
-    };
+    const isInitialView = !isLoading && !error && !analysisResult;
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 transition-opacity duration-300" onClick={onClose}>
             <div className="bg-[#24283b] rounded-lg shadow-2xl p-6 w-full max-w-2xl flex flex-col" style={{ height: '85vh' }} onClick={(e) => e.stopPropagation()}>
-                <div className="flex justify-between items-center mb-4">
+                <div className="flex justify-between items-center mb-4 flex-shrink-0">
                     <h2 className="text-xl font-bold text-white">Báo cáo Phân tích Đối thủ</h2>
                     <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
                 </div>
-                <div className="flex-grow overflow-y-auto pr-2">
-                   {renderContent()}
-                </div>
+                
+                {isInitialView ? (
+                    <>
+                        <div className="flex-grow flex flex-col min-h-0">
+                             <div className="text-center flex-shrink-0">
+                                <ChartBarIcon className="w-16 h-16 mx-auto text-indigo-400" />
+                                <h3 className="mt-4 text-lg font-semibold">Phân tích Đối thủ Cạnh tranh</h3>
+                                <p className="mt-2 text-sm text-gray-400">
+                                    Chọn ít nhất 2 kênh từ thư viện của bạn để AI tạo ra một báo cáo phân tích so sánh chi tiết.
+                                </p>
+                            </div>
+                            <div className="mt-6 bg-[#1a1b26] p-4 rounded-lg flex-grow flex flex-col min-h-0">
+                                <h4 className="font-semibold text-left mb-3 flex-shrink-0">Chọn các kênh để phân tích:</h4>
+                                <div className="space-y-2 overflow-y-auto pr-2 flex-grow">
+                                    {sessions.map(s => (
+                                        <label key={s.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-[#2d303e] transition-colors duration-200 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedChannelIds.includes(s.id)}
+                                                onChange={() => handleChannelSelection(s.id)}
+                                                className={`h-5 w-5 rounded bg-gray-700 border-gray-600 text-indigo-500 focus:ring-indigo-500 focus:ring-2 ring-offset-2 ring-offset-[#1a1b26]`}
+                                            />
+                                            <span className="text-sm text-gray-300">{s.channelInfo.title}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="pt-4 flex-shrink-0">
+                            {selectedChannelIds.length > 0 && selectedChannelIds.length < 2 && (
+                                <p className="text-xs text-yellow-400 mb-3 text-left px-1">Vui lòng chọn thêm ít nhất {2 - selectedChannelIds.length} kênh nữa.</p>
+                            )}
+                            <button 
+                                onClick={handleStartAnalysis}
+                                disabled={isLoading || selectedChannelIds.length < 2}
+                                className={`w-full flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+                            >
+                                Bắt đầu Phân tích ({selectedChannelIds.length})
+                            </button>
+                        </div>
+                    </>
+                ) : (
+                    <div className="flex-grow overflow-y-auto pr-2">
+                        {isLoading && (
+                            <div className="text-center py-16">
+                                <SpinnerIcon className="w-12 h-12 text-indigo-400 animate-spin mx-auto" />
+                                <p className="mt-4 text-lg">AI đang phân tích dữ liệu...</p>
+                                <p className="text-sm text-gray-400">Quá trình này có thể mất vài phút tùy thuộc vào lượng dữ liệu.</p>
+                            </div>
+                        )}
+                        {error && (
+                            <div className="text-center py-16">
+                                <p className="text-red-400">Đã xảy ra lỗi:</p>
+                                <p className="mt-2 text-sm bg-red-900/50 p-3 rounded-md">{error}</p>
+                            </div>
+                        )}
+                        {analysisResult && (
+                            <div className="relative">
+                                <div className="absolute top-0 right-0 flex space-x-2">
+                                    <button onClick={handleCopy} className="p-1.5 bg-gray-600 hover:bg-gray-500 rounded-md text-white" title="Sao chép">
+                                        <ClipboardCopyIcon className="w-5 h-5"/>
+                                        {copyStatus === 'copied' && <span className="absolute -top-6 -right-2 bg-green-600 text-white text-xs px-2 py-0.5 rounded-md">Đã chép!</span>}
+                                    </button>
+                                    <button onClick={handleDownload} className="p-1.5 bg-gray-600 hover:bg-gray-500 rounded-md text-white" title="Tải về (.doc)">
+                                        <DownloadIcon className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                <div className="text-sm text-gray-200 bg-[#1a1b26] p-4 rounded-lg whitespace-pre-wrap leading-relaxed">
+                                    {analysisResult}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );
