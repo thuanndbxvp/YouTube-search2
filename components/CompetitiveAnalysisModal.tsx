@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { SavedSession, StoredConfig, Theme } from '../types';
-import { SpinnerIcon, ChartBarIcon, DownloadIcon, ClipboardCopyIcon } from './Icons';
+import { SpinnerIcon, ChartBarIcon, DownloadIcon, ClipboardCopyIcon, UsersIcon, VideoCameraIcon } from './Icons';
+import { formatNumber, formatNumberShort } from '../utils/formatters';
 
 interface CompetitiveAnalysisModalProps {
   isOpen: boolean;
@@ -139,14 +140,26 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
                         <h4 className="font-semibold text-left mb-3 flex-shrink-0">Chọn các kênh để phân tích:</h4>
                         <div className="space-y-2 overflow-y-auto pr-2 flex-grow">
                             {sessions.map(s => (
-                                <label key={s.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-[#2d303e] transition-colors duration-200 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedChannelIds.includes(s.id)}
-                                        onChange={() => handleChannelSelection(s.id)}
-                                        className={`h-5 w-5 rounded bg-gray-700 border-gray-600 text-indigo-500 focus:ring-indigo-500 focus:ring-2 ring-offset-2 ring-offset-[#1a1b26]`}
-                                    />
-                                    <span className="text-sm text-gray-300">{s.channelInfo.title}</span>
+                                <label key={s.id} className="flex items-center justify-between p-2 rounded-md hover:bg-[#2d303e] transition-colors duration-200 cursor-pointer">
+                                    <div className="flex items-center space-x-3 overflow-hidden mr-4">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedChannelIds.includes(s.id)}
+                                            onChange={() => handleChannelSelection(s.id)}
+                                            className={`h-5 w-5 rounded bg-gray-700 border-gray-600 text-indigo-500 focus:ring-indigo-500 focus:ring-2 ring-offset-2 ring-offset-[#1a1b26] flex-shrink-0`}
+                                        />
+                                        <span className="text-sm text-gray-300 truncate" title={s.channelInfo.title}>{s.channelInfo.title}</span>
+                                    </div>
+                                    <div className="flex items-center space-x-4 text-xs text-gray-400 flex-shrink-0">
+                                        <div className="flex items-center" title="Người đăng ký">
+                                            <UsersIcon className="w-4 h-4 mr-1.5" />
+                                            <span>{formatNumberShort(s.channelInfo.subscriberCount)}</span>
+                                        </div>
+                                        <div className="flex items-center" title="Video">
+                                            <VideoCameraIcon className="w-4 h-4 mr-1.5" />
+                                            <span>{formatNumber(s.channelInfo.videoCount)}</span>
+                                        </div>
+                                    </div>
                                 </label>
                             ))}
                         </div>
