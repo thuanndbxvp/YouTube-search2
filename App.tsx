@@ -266,7 +266,6 @@ export default function App() {
   const [updatingSessionId, setUpdatingSessionId] = useState<string | null>(null);
   const [isLoadedFromSession, setIsLoadedFromSession] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'saving' | 'error'>('idle');
   const [brainstormMessages, setBrainstormMessages] = useState<ChatMessage[]>([]);
   
   const [channelQueue, setChannelQueue] = useState<string[]>([]);
@@ -342,7 +341,29 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
 
       const keywordCounts = calculateKeywordCounts(videoData.videos);
       const topKeywords = getTopKeywords(keywordCounts, 10);
-      setBrainstormMessages(createInitialBrainstormMessage(info, topKeywords));
+      const newBrainstormMessages = createInitialBrainstormMessage(info, topKeywords);
+      setBrainstormMessages(newBrainstormMessages);
+      
+      // Auto-save session
+      const newSession: SavedSession = {
+        id: info.id,
+        savedAt: new Date().toISOString(),
+        channelInfo: info,
+        videos: videoData.videos,
+        nextPageToken: videoData.nextPageToken,
+        brainstormMessages: newBrainstormMessages,
+      };
+
+      setSavedSessions(prevSessions => {
+          const newSessionsList = [...prevSessions];
+          const existingIndex = newSessionsList.findIndex(s => s.id === newSession.id);
+          if (existingIndex > -1) {
+              newSessionsList[existingIndex] = newSession;
+          } else {
+              newSessionsList.push(newSession);
+          }
+          return newSessionsList;
+      });
       
       // On success, remove from queue
       setChannelQueue(prev => prev.filter(url => url !== channelUrl));
@@ -354,7 +375,7 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
       setIsLoading(false);
       setCurrentlyAnalyzingUrl(null);
     }
-  }, [appConfig, createInitialBrainstormMessage]);
+  }, [appConfig, createInitialBrainstormMessage, setSavedSessions]);
 
   const handleQueueSubmit = (urlsText: string) => {
     const urls = urlsText
@@ -398,39 +419,6 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
       setIsLoadingMore(false);
     }
   }, [nextPageToken, channelInfo, appConfig]);
-
-  const handleSaveSession = async () => {
-    if (!channelInfo || videos.length === 0) return;
-    setSaveStatus('saving');
-
-    const newSession: SavedSession = {
-      id: channelInfo.id,
-      savedAt: new Date().toISOString(),
-      channelInfo,
-      videos,
-      nextPageToken,
-      brainstormMessages,
-    };
-    
-    const newSessionsList = [...savedSessions];
-    const existingIndex = newSessionsList.findIndex(s => s.id === newSession.id);
-    if (existingIndex > -1) {
-        newSessionsList[existingIndex] = newSession;
-    } else {
-        newSessionsList.push(newSession);
-    }
-
-    try {
-        setSavedSessions(newSessionsList);
-        setSaveStatus('saved');
-        setTimeout(() => setSaveStatus('idle'), 2000);
-    } catch(e) {
-        const errorMsg = e instanceof Error ? e.message : "Không thể lưu phiên.";
-        setError(errorMsg);
-        setSaveStatus('error');
-        setTimeout(() => setSaveStatus('idle'), 3000);
-    }
-  };
 
   const handleLoadSession = (sessionId: string) => {
     const session = savedSessions.find(s => s.id === sessionId);
@@ -796,9 +784,6 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
         <Header 
             onApiClick={() => setIsApiModalOpen(true)}
             onLibraryClick={() => setIsLibraryModalOpen(true)}
-            onSaveSession={handleSaveSession}
-            isSessionSavable={videos.length > 0 && !isLoading}
-            saveStatus={saveStatus}
             theme={appConfig.theme}
             setAppConfig={setAppConfig}
             onCompetitiveAnalysisClick={() => setIsCompetitiveAnalysisModalOpen(true)}

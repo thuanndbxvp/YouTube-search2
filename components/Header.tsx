@@ -1,13 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { BookmarkIcon, LibraryIcon, KeyIcon, YouTubeIcon, ChartBarIcon, SpinnerIcon, TrashIcon } from './Icons';
+import { LibraryIcon, KeyIcon, YouTubeIcon, ChartBarIcon, SpinnerIcon, TrashIcon } from './Icons';
 import { StoredConfig, Theme } from '../types';
 
 interface HeaderProps {
     onApiClick: () => void;
     onLibraryClick: () => void;
-    onSaveSession: () => void;
-    isSessionSavable: boolean;
-    saveStatus: 'idle' | 'saved' | 'saving' | 'error';
     theme: Theme;
     setAppConfig: React.Dispatch<React.SetStateAction<StoredConfig>>;
     onCompetitiveAnalysisClick: () => void;
@@ -34,17 +31,10 @@ const PaintBrushIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 
-export const Header: React.FC<HeaderProps> = ({ onApiClick, onLibraryClick, onSaveSession, isSessionSavable, saveStatus, theme, setAppConfig, onCompetitiveAnalysisClick, isCompetitiveAnalysisAvailable, analysisState }) => {
+export const Header: React.FC<HeaderProps> = ({ onApiClick, onLibraryClick, theme, setAppConfig, onCompetitiveAnalysisClick, isCompetitiveAnalysisAvailable, analysisState }) => {
     const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false);
     const themeDropdownRef = useRef<HTMLDivElement>(null);
     
-    const saveButtonText = {
-        'idle': 'Lưu phiên',
-        'saving': 'Đang lưu...',
-        'saved': 'Đã lưu!',
-        'error': 'Lỗi!'
-    };
-
     const handleThemeChange = (newTheme: Theme) => {
         setAppConfig(prevConfig => ({ ...prevConfig, theme: newTheme }));
         setIsThemeDropdownOpen(false);
@@ -110,17 +100,6 @@ export const Header: React.FC<HeaderProps> = ({ onApiClick, onLibraryClick, onSa
                         </div>
                     )}
                  </div>
-                 <button 
-                    onClick={onSaveSession}
-                    disabled={!isSessionSavable || saveStatus === 'saving' || saveStatus === 'saved'}
-                    title={!isSessionSavable ? "Phân tích một kênh trước khi lưu" : "Lưu phiên làm việc hiện tại"}
-                    className={`flex items-center justify-center text-white text-sm font-semibold py-1.5 px-3 rounded-md transition-colors duration-200 disabled:opacity-50
-                        ${saveStatus === 'saved' ? 'bg-green-600' : `bg-${theme}-600 hover:bg-${theme}-700`}`
-                    }
-                >
-                    <BookmarkIcon className="w-4 h-4 mr-1.5" />
-                    {saveButtonText[saveStatus]}
-                </button>
                 <button 
                     onClick={onLibraryClick}
                     title="Mở thư viện các phiên đã lưu"
