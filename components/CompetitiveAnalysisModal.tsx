@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { SavedSession, StoredConfig, Theme } from '../types';
 import { SpinnerIcon, ChartBarIcon, DownloadIcon, ClipboardCopyIcon, UsersIcon, VideoCameraIcon, SparklesIcon } from './Icons';
 import { formatNumber, formatNumberShort } from '../utils/formatters';
@@ -30,6 +30,13 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
             setValidationError(null);
         }
     }, [isOpen, analysisState.isLoading, analysisState.isComplete]);
+
+    const totalSelectedVideos = useMemo(() => {
+        if (selectedChannelIds.length === 0) return 0;
+        return sessions
+            .filter(s => selectedChannelIds.includes(s.id))
+            .reduce((total, session) => total + parseInt(session.channelInfo.videoCount || '0', 10), 0);
+    }, [selectedChannelIds, sessions]);
 
 
     const handleChannelSelection = (channelId: string) => {
@@ -196,7 +203,10 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
                         disabled={selectedChannelIds.length < 2}
                         className={`w-full flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
-                        Bắt đầu Phân tích & Chạy ngầm ({selectedChannelIds.length})
+                        Bắt đầu Phân tích & Chạy ngầm ({selectedChannelIds.length > 0 
+                            ? `${selectedChannelIds.length} kênh / ${formatNumber(totalSelectedVideos)} video`
+                            : selectedChannelIds.length
+                        })
                     </button>
                 </div>
             </>
