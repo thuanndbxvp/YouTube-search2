@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { SavedSession, Theme } from '../types';
-import { TrashIcon, UsersIcon, VideoCameraIcon, ClockIcon, ArrowPathIcon, SpinnerIcon } from './Icons';
+import { TrashIcon, UsersIcon, VideoCameraIcon, ClockIcon, ArrowPathIcon, SpinnerIcon, UploadIcon, DownloadIcon } from './Icons';
 import { formatNumber } from '../utils/formatters';
 
 interface LibraryModalProps {
@@ -12,6 +12,9 @@ interface LibraryModalProps {
   onUpdate: (sessionId: string) => void;
   updatingSessionId: string | null;
   theme: Theme;
+  onExportExcel: () => void;
+  onExportJson: () => void;
+  onImport: (sessions: SavedSession[]) => void;
 }
 
 
@@ -25,7 +28,9 @@ const formatDate = (dateString: string): string => {
     });
 };
 
-export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, sessions, onLoad, onDelete, onUpdate, updatingSessionId, theme }) => {
+export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, sessions, onLoad, onDelete, onUpdate, updatingSessionId, theme, onExportExcel, onExportJson, onImport }) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const validSessions = useMemo(() => {
     if (!Array.isArray(sessions)) {
         console.error("LibraryModal received a non-array value for sessions:", sessions);
@@ -51,6 +56,37 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
     });
 
   }, [sessions]);
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const result = e.target?.result;
+            if (typeof result === 'string') {
+                const parsedSessions = JSON.parse(result);
+                onImport(parsedSessions);
+            }
+        } catch (error) {
+            console.error("Error parsing imported sessions:", error);
+            alert(`Lỗi khi đọc tệp: ${error instanceof Error ? error.message : 'Định dạng không hợp lệ.'}`);
+        }
+    };
+    reader.onerror = () => {
+        alert('Lỗi: Không thể đọc tệp.');
+    };
+    reader.readAsText(file);
+    
+    if (event.target) {
+        event.target.value = '';
+    }
+  };
   
   if (!isOpen) return null;
 
@@ -126,7 +162,36 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
           )}
         </div>
 
-        <div className="mt-6 flex justify-end items-center">
+        <div className="mt-6 flex justify-between items-center">
+            <div className="flex items-center space-x-2">
+                 <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" className="hidden" />
+                 <button 
+                    onClick={handleImportClick}
+                    className="flex items-center justify-center bg-gray-600 hover:bg-gray-700 text-white font-semibold text-sm py-2 px-4 rounded-md transition-colors"
+                    title="Nhập thư viện từ tệp .json"
+                >
+                    <UploadIcon className="w-4 h-4 mr-2" />
+                    Nhập JSON
+                </button>
+                 <button 
+                    onClick={onExportJson}
+                    disabled={validSessions.length === 0}
+                    className="flex items-center justify-center bg-blue-700 hover:bg-blue-800 text-white font-semibold text-sm py-2 px-4 rounded-md transition-colors disabled:opacity-50"
+                    title="Xuất tất cả các kênh trong thư viện ra tệp .json"
+                >
+                    <DownloadIcon className="w-4 h-4 mr-2" />
+                    Xuất JSON
+                </button>
+                 <button 
+                    onClick={onExportExcel}
+                    disabled={validSessions.length === 0}
+                    className="flex items-center justify-center bg-green-700 hover:bg-green-800 text-white font-semibold text-sm py-2 px-4 rounded-md transition-colors disabled:opacity-50"
+                    title="Xuất tất cả các kênh trong thư viện ra tệp .xlsx"
+                >
+                    <DownloadIcon className="w-4 h-4 mr-2" />
+                    Xuất Excel
+                </button>
+            </div>
            <button onClick={onClose} className="py-2 px-6 rounded-lg bg-gray-600 hover:bg-gray-700 text-white font-semibold transition-colors" title="Đóng cửa sổ thư viện">Đóng</button>
         </div>
       </div>

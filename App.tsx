@@ -590,7 +590,7 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
     }
   };
 
-  const handleExportAllToExcel = () => {
+  const handleExportExcel = () => {
     if (savedSessions.length === 0) {
         alert('Không có phiên nào để xuất.');
         return;
@@ -629,6 +629,32 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
     const date = new Date().toISOString().split('T')[0];
     XLSX.writeFile(workbook, `Thu_vien_kenh_YouTube_${date}.xlsx`);
   };
+
+  const handleExportJson = () => {
+    if (savedSessions.length === 0) {
+        alert('Không có phiên nào để xuất.');
+        return;
+    }
+
+    try {
+        const dataStr = JSON.stringify(savedSessions, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const date = new Date().toISOString().split('T')[0];
+        link.download = `Thu_vien_kenh_YouTube_${date}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    } catch (e) {
+        const errorMsg = e instanceof Error ? e.message : "Không thể tạo tệp JSON.";
+        setError(errorMsg);
+        alert(`Lỗi: ${errorMsg}`);
+    }
+  };
+
 
   const handleGetTranscript = async (video: Video) => {
       setTranscriptModalState({
@@ -760,6 +786,9 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
         onUpdate={handleUpdateSession}
         updatingSessionId={updatingSessionId}
         theme={appConfig.theme}
+        onExportExcel={handleExportExcel}
+        onExportJson={handleExportJson}
+        onImport={handleImportSessions}
       />
       <CompetitiveAnalysisModal
         isOpen={isCompetitiveAnalysisModalOpen}
