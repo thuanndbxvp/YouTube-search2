@@ -178,30 +178,9 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 transition-opacity duration-300" onClick={onClose}>
       <div className="bg-[#24283b] rounded-lg shadow-2xl p-6 w-full max-w-3xl flex flex-col" style={{ height: '80vh' }} onClick={(e) => e.stopPropagation()}>
-        <div className="flex justify-between items-center mb-2">
+        <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-white">Thư viện phiên làm việc</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none" title="Đóng cửa sổ">&times;</button>
-        </div>
-
-        <div className="flex items-center justify-end mb-4 text-sm">
-            <label htmlFor="sort-key" className="text-gray-400 mr-2">Sắp xếp:</label>
-            <select
-                id="sort-key"
-                value={sortConfig.key}
-                onChange={e => setSortConfig(c => ({ ...c, key: e.target.value as SortKey }))}
-                className="bg-[#2d303e] border border-gray-600 rounded-md px-2 py-1 text-white focus:ring-1 focus:ring-blue-500 outline-none"
-            >
-                <option value="savedAt">Ngày lưu</option>
-                <option value="videoCount">Số video</option>
-                <option value="subscriberCount">Lượt subscribers</option>
-            </select>
-            <button
-                onClick={() => setSortConfig(c => ({ ...c, direction: c.direction === 'desc' ? 'asc' : 'desc' }))}
-                className="p-1.5 ml-2 bg-gray-700 hover:bg-gray-600 rounded-md text-white"
-                title={sortConfig.direction === 'desc' ? 'Sắp xếp tăng dần' : 'Sắp xếp giảm dần'}
-            >
-                {sortConfig.direction === 'desc' ? <SortDescIcon className="w-4 h-4" /> : <SortAscIcon className="w-4 h-4" />}
-            </button>
         </div>
 
         <div className="flex-grow overflow-y-auto pr-2 space-y-3">

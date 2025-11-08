@@ -34,6 +34,14 @@ const initialTranscriptState = {
     currentVideoId: null as string | null,
 };
 
+const initialAnalysisState = {
+  isLoading: false,
+  error: null as string | null,
+  result: '',
+  isComplete: false,
+};
+
+
 const analysisInstructions = `{
   "task": "YouTube Channel Competitive Analysis",
   "language": "Vietnamese",
@@ -259,12 +267,7 @@ export default function App() {
 
   const [transcriptModalState, setTranscriptModalState] = useState(initialTranscriptState);
 
-  const [analysisState, setAnalysisState] = useState({
-    isLoading: false,
-    error: null as string | null,
-    result: '',
-    isComplete: false,
-  });
+  const [analysisState, setAnalysisState] = useLocalStorage('yt-analyzer-analysis-v1', initialAnalysisState);
   
   useEffect(() => {
       const oldConfig = appConfig as any;
@@ -287,6 +290,13 @@ export default function App() {
           });
       }
   }, []);
+
+  useEffect(() => {
+    // Prevent analysis from being stuck in a loading state on page reload
+    if (analysisState.isLoading) {
+      setAnalysisState(prev => ({ ...prev, isLoading: false }));
+    }
+  }, []); // Run only once on component mount
 
   const createInitialBrainstormMessage = useCallback((chInfo: ChannelInfo, keywords: string[]): ChatMessage[] => {
       if (!chInfo || keywords.length === 0) return [];
@@ -691,7 +701,7 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
   };
 
   const handleResetCompetitiveAnalysis = () => {
-    setAnalysisState({ isLoading: false, error: null, result: '', isComplete: false });
+    setAnalysisState(initialAnalysisState);
   };
 
 
