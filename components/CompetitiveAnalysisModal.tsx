@@ -55,6 +55,11 @@ const parseAndRenderAnalysis = (markdown: string, theme: Theme): React.ReactNode
             i++;
             continue;
         }
+        if (line.startsWith('### ')) {
+            elements.push(<h3 key={i} className={`text-xl font-bold mt-5 mb-2 text-${theme}-300`}>{renderText(line.substring(4))}</h3>);
+            i++;
+            continue;
+        }
 
         if (line.startsWith('|') && line.includes('|')) {
             const tableLines = [];
@@ -139,7 +144,8 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
             typeof s.channelInfo.id === 'string' &&
             typeof s.channelInfo.title === 'string' &&
             typeof s.channelInfo.subscriberCount === 'string' &&
-            typeof s.channelInfo.videoCount === 'string'
+            typeof s.channelInfo.videoCount === 'string' &&
+            Array.isArray(s.videos)
         );
     }, [sessions]);
 

@@ -1,9 +1,6 @@
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { SavedSession, Theme } from '../types';
-import { TrashIcon, DownloadIcon, UploadIcon, TableCellsIcon, ArrowPathIcon, SpinnerIcon, SortAscIcon, SortDescIcon } from './Icons';
-import { parseISO8601Duration, formatDate as formatDateForExcel } from '../utils/formatters';
-
-declare const XLSX: any;
+import { TrashIcon } from './Icons';
 
 interface LibraryModalProps {
   isOpen: boolean;
@@ -11,9 +8,6 @@ interface LibraryModalProps {
   sessions: SavedSession[];
   onLoad: (sessionId: string) => void;
   onDelete: (sessionId: string) => void;
-  onImport: (sessions: SavedSession[]) => void;
-  onUpdate: (sessionId: string) => void;
-  updatingSessionId: string | null;
   theme: Theme;
 }
 
@@ -27,99 +21,9 @@ const formatDate = (dateString: string): string => {
     });
 };
 
-type SortKey = 'savedAt' | 'videoCount' | 'subscriberCount';
-type SortDirection = 'asc' | 'desc';
-
-interface SortConfig {
-    key: SortKey;
-    direction: SortDirection;
-}
-
-export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, sessions, onLoad, onDelete, onImport, onUpdate, updatingSessionId, theme }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'savedAt', direction: 'desc' });
+export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, sessions, onLoad, onDelete, theme }) => {
 
   if (!isOpen) return null;
-
-  const handleExport = () => {
-    if (sessions.length === 0) return;
-    const date = new Date().toISOString().split('T')[0];
-    const fileName = `youtube_analyzer_sessions_${date}.json`;
-    const dataStr = JSON.stringify(sessions, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        try {
-            const text = e.target?.result as string;
-            const importedSessions = JSON.parse(text);
-            
-            if (Array.isArray(importedSessions)) {
-                onImport(importedSessions);
-            } else {
-                alert('Tệp không hợp lệ. Vui lòng đảm bảo tệp chứa dữ liệu phiên đã xuất hợp lệ.');
-            }
-        } catch (error) {
-            console.error("Lỗi khi phân tích cú pháp tệp nhập:", error);
-            alert('Không thể đọc tệp. Vui lòng đảm bảo đó là tệp JSON hợp lệ.');
-        } finally {
-            if (event.target) {
-                event.target.value = '';
-            }
-        }
-    };
-    reader.readAsText(file);
-  };
-  
-  const handleExportAllToExcel = () => {
-    if (sessions.length === 0) return;
-
-    const workbook = XLSX.utils.book_new();
-
-    sessions.forEach(session => {
-      // Sanitize sheet name for Excel (max 31 chars, no special chars)
-      const safeSheetName = session.channelInfo.title.replace(/[\\/*?:"<>|]/g, '').substring(0, 31);
-      
-      const videoData = session.videos.map(video => ({
-        'Tiêu đề': video.snippet.title,
-        'Mô tả': video.snippet.description,
-        'Ngày đăng': formatDateForExcel(video.snippet.publishedAt),
-        'Lượt xem': parseInt(video.statistics.viewCount, 10),
-        'Lượt thích': parseInt(video.statistics.likeCount, 10),
-        'Thời lượng': parseISO8601Duration(video.contentDetails.duration),
-        'URL': `https://www.youtube.com/watch?v=${video.id}`
-      }));
-
-      const worksheet = XLSX.utils.json_to_sheet(videoData);
-      worksheet['!cols'] = [
-          { wch: 70 }, { wch: 100 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 45 }
-      ];
-
-      XLSX.utils.book_append_sheet(workbook, worksheet, safeSheetName);
-    });
-    
-    const date = new Date().toISOString().split('T')[0];
-    const fileName = `youtube_analyzer_all_channels_data_${date}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
-  };
 
   const sortedSessions = useMemo(() => {
     // Safety check: Ensure `sessions` is an array before proceeding.
@@ -136,44 +40,13 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
       typeof s.channelInfo === 'object' && s.channelInfo !== null &&
       typeof s.channelInfo.title === 'string' &&
       typeof s.channelInfo.thumbnail === 'string' &&
-      typeof s.channelInfo.videoCount === 'string' &&
-      typeof s.channelInfo.subscriberCount === 'string' &&
       Array.isArray(s.videos) &&
       typeof s.savedAt === 'string'
     );
 
-    return [...validSessions].sort((a, b) => {
-        let aValue: number, bValue: number;
-
-        switch(sortConfig.key) {
-            case 'videoCount':
-                aValue = parseInt(a.channelInfo.videoCount, 10) || 0;
-                bValue = parseInt(b.channelInfo.videoCount, 10) || 0;
-                break;
-            case 'subscriberCount':
-                aValue = parseInt(a.channelInfo.subscriberCount, 10) || 0;
-                bValue = parseInt(b.channelInfo.subscriberCount, 10) || 0;
-                break;
-            case 'savedAt':
-            default:
-                aValue = new Date(a.savedAt).getTime();
-                bValue = new Date(b.savedAt).getTime();
-                break;
-        }
-
-        // Handle cases where parsing might result in NaN
-        if (isNaN(aValue)) aValue = 0;
-        if (isNaN(bValue)) bValue = 0;
-
-        if (aValue < bValue) {
-            return sortConfig.direction === 'asc' ? -1 : 1;
-        }
-        if (aValue > bValue) {
-            return sortConfig.direction === 'asc' ? 1 : -1;
-        }
-        return 0;
-    });
-  }, [sessions, sortConfig]);
+    // Default sort: newest first
+    return validSessions.sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime());
+  }, [sessions]);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 transition-opacity duration-300" onClick={onClose}>
@@ -195,24 +68,6 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
                     </p>
                 </div>
                 <div className="flex items-center space-x-2">
-                    <button 
-                        onClick={() => onUpdate(session.id)}
-                        disabled={!!updatingSessionId}
-                        className="flex items-center justify-center bg-cyan-600 hover:bg-cyan-700 text-white font-semibold text-sm py-2 px-4 rounded-md transition-colors disabled:opacity-50"
-                        title="Làm mới dữ liệu cho kênh này từ YouTube"
-                    >
-                        {updatingSessionId === session.id ? (
-                            <>
-                                <SpinnerIcon className="w-4 h-4 mr-2 animate-spin" />
-                                <span>Cập nhật...</span>
-                            </>
-                        ) : (
-                            <>
-                                <ArrowPathIcon className="w-4 h-4 mr-2" />
-                                <span>Cập nhật</span>
-                            </>
-                        )}
-                    </button>
                     <button 
                         onClick={() => onLoad(session.id)}
                         className={`bg-${theme}-600 hover:bg-${theme}-700 text-white font-semibold text-sm py-2 px-4 rounded-md transition-colors`}
@@ -238,42 +93,7 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
           )}
         </div>
 
-        <div className="mt-6 flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              accept=".json"
-              className="hidden"
-            />
-            <button
-              onClick={handleImportClick}
-              className="flex items-center justify-center bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 text-sm"
-              title="Nhập các phiên làm việc từ một tệp .json"
-            >
-              <UploadIcon className="w-4 h-4 mr-2" />
-              Nhập
-            </button>
-            <button
-              onClick={handleExport}
-              disabled={sessions.length === 0}
-              className="flex items-center justify-center bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 text-sm disabled:opacity-50"
-              title="Xuất tất cả các phiên trong thư viện ra tệp .json"
-            >
-              <DownloadIcon className="w-4 h-4 mr-2" />
-              Xuất JSON
-            </button>
-             <button
-              onClick={handleExportAllToExcel}
-              disabled={sessions.length === 0}
-              className="flex items-center justify-center bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 text-sm disabled:opacity-50"
-              title="Xuất dữ liệu video của tất cả các kênh ra tệp .xlsx"
-            >
-              <TableCellsIcon className="w-4 h-4 mr-2" />
-              Xuất Excel
-            </button>
-          </div>
+        <div className="mt-6 flex justify-end items-center">
            <button onClick={onClose} className="py-2 px-6 rounded-lg bg-gray-600 hover:bg-gray-700 text-white font-semibold transition-colors" title="Đóng cửa sổ thư viện">Đóng</button>
         </div>
       </div>

@@ -720,9 +720,6 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
         sessions={savedSessions}
         onLoad={handleLoadSession}
         onDelete={handleDeleteSession}
-        onImport={handleImportSessions}
-        onUpdate={handleUpdateSession}
-        updatingSessionId={updatingSessionId}
         theme={appConfig.theme}
       />
       <CompetitiveAnalysisModal
