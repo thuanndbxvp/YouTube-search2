@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { SavedSession, StoredConfig, Theme } from '../types';
-import { SpinnerIcon, ChartBarIcon, DownloadIcon, ClipboardCopyIcon, UsersIcon, VideoCameraIcon, SparklesIcon } from './Icons';
+import { SpinnerIcon, ChartBarIcon, DownloadIcon, ClipboardCopyIcon, UsersIcon, VideoCameraIcon, SparklesIcon, SortAscIcon, SortDescIcon } from './Icons';
 import { formatNumber, formatNumberShort } from '../utils/formatters';
 
 interface CompetitiveAnalysisModalProps {
@@ -18,6 +18,15 @@ interface CompetitiveAnalysisModalProps {
   };
   onResetAnalysis: () => void;
 }
+
+type SortKey = 'savedAt' | 'subscriberCount' | 'videoCount' | 'title';
+type SortDirection = 'asc' | 'desc';
+
+interface SortConfig {
+  key: SortKey;
+  direction: SortDirection;
+}
+
 
 const parseAndRenderAnalysis = (markdown: string, theme: Theme): React.ReactNode[] => {
     const elements: React.ReactNode[] = [];
@@ -108,11 +117,14 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
     const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
     const [selectedChannelIds, setSelectedChannelIds] = useState<string[]>([]);
     const [validationError, setValidationError] = useState<string | null>(null);
+    const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'savedAt', direction: 'desc' });
+
 
     useEffect(() => {
         if (isOpen && !analysisState.isLoading && !analysisState.isComplete) {
             setSelectedChannelIds([]);
             setValidationError(null);
+            setSortConfig({ key: 'savedAt', direction: 'desc' });
         }
     }, [isOpen, analysisState.isLoading, analysisState.isComplete]);
 
@@ -122,6 +134,41 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
             .filter(s => selectedChannelIds.includes(s.id))
             .reduce((total, session) => total + parseInt(session.channelInfo.videoCount || '0', 10), 0);
     }, [selectedChannelIds, sessions]);
+
+    const sortedSessions = useMemo(() => {
+        return [...sessions].sort((a, b) => {
+            let aValue: string | number;
+            let bValue: string | number;
+
+            switch(sortConfig.key) {
+                case 'videoCount':
+                    aValue = parseInt(a.channelInfo.videoCount, 10);
+                    bValue = parseInt(b.channelInfo.videoCount, 10);
+                    break;
+                case 'subscriberCount':
+                    aValue = parseInt(a.channelInfo.subscriberCount, 10);
+                    bValue = parseInt(b.channelInfo.subscriberCount, 10);
+                    break;
+                case 'title':
+                    aValue = a.channelInfo.title.toLowerCase();
+                    bValue = b.channelInfo.title.toLowerCase();
+                    break;
+                case 'savedAt':
+                default:
+                    aValue = new Date(a.savedAt).getTime();
+                    bValue = new Date(b.savedAt).getTime();
+                    break;
+            }
+
+            if (aValue < bValue) {
+                return sortConfig.direction === 'asc' ? -1 : 1;
+            }
+            if (aValue > bValue) {
+                return sortConfig.direction === 'asc' ? 1 : -1;
+            }
+            return 0;
+        });
+    }, [sessions, sortConfig]);
 
 
     const handleChannelSelection = (channelId: string) => {
@@ -247,9 +294,33 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
                         </p>
                     </div>
                     <div className="mt-6 bg-[#1a1b26] p-4 rounded-lg flex-grow flex flex-col min-h-0">
-                        <h4 className="font-semibold text-left mb-3 flex-shrink-0">Chọn các kênh để phân tích:</h4>
+                        <div className="flex justify-between items-center mb-3 flex-shrink-0">
+                            <h4 className="font-semibold text-left">Chọn các kênh để phân tích:</h4>
+                            <div className="flex items-center text-xs">
+                                <label htmlFor="sort-key-analysis" className="text-gray-400 mr-2">Sắp xếp:</label>
+                                <select
+                                    id="sort-key-analysis"
+                                    value={sortConfig.key}
+                                    onChange={e => setSortConfig(c => ({ ...c, key: e.target.value as SortKey }))}
+                                    className="bg-[#2d303e] border border-gray-600 rounded-md px-2 py-1 text-white focus:ring-1 focus:ring-indigo-500 outline-none"
+                                >
+                                    <option value="savedAt">Ngày lưu</option>
+                                    <option value="subscriberCount">Lượt Sub</option>
+                                    <option value="videoCount">Số Video</option>
+                                    <option value="title">Tên kênh (A-Z)</option>
+                                </select>
+                                <button
+                                    onClick={() => setSortConfig(c => ({ ...c, direction: c.direction === 'desc' ? 'asc' : 'desc' }))}
+                                    className="p-1.5 ml-2 bg-gray-700 hover:bg-gray-600 rounded-md text-white"
+                                    title={sortConfig.direction === 'desc' ? 'Sắp xếp tăng dần' : 'Sắp xếp giảm dần'}
+                                >
+                                    {sortConfig.direction === 'desc' ? <SortDescIcon className="w-3 h-3" /> : <SortAscIcon className="w-3 h-3" />}
+                                </button>
+                            </div>
+                        </div>
+
                         <div className="space-y-2 overflow-y-auto pr-2 flex-grow">
-                            {sessions.map(s => (
+                            {sortedSessions.map(s => (
                                 <label key={s.id} className="flex items-center justify-between p-2 rounded-md hover:bg-[#2d303e] transition-colors duration-200 cursor-pointer">
                                     <div className="flex items-center space-x-3 overflow-hidden mr-4">
                                         <input
