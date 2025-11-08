@@ -80,13 +80,6 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
                     </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                    <button 
-                        onClick={() => onLoad(session.id)}
-                        className={`bg-${theme}-600 hover:bg-${theme}-700 text-white font-semibold text-sm py-2 px-4 rounded-md transition-colors`}
-                        title="Tải lại phiên làm việc này vào giao diện chính"
-                    >
-                        Tải lại
-                    </button>
                     <button
                         onClick={() => onUpdate(session.id)}
                         disabled={!!updatingSessionId}
@@ -104,6 +97,13 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
                         )}
                     </button>
                     <button 
+                        onClick={() => onLoad(session.id)}
+                        className={`bg-${theme}-600 hover:bg-${theme}-700 text-white font-semibold text-sm py-2 px-4 rounded-md transition-colors`}
+                        title="Tải lại phiên làm việc này vào giao diện chính"
+                    >
+                        Tải lại
+                    </button>
+                    <button 
                         onClick={() => onDelete(session.id)}
                         className="bg-red-800 hover:bg-red-900 text-white p-2.5 rounded-md transition-colors"
                         title="Xóa vĩnh viễn phiên làm việc này"
@@ -116,7 +116,7 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
           ) : (
             <div className="text-center text-gray-400 pt-16">
                 <p className="text-lg">Thư viện của bạn trống.</p>
-                <p className="text-sm mt-2">Phân tích một kênh và nhấn "Lưu phiên" để thêm vào đây.</p>
+                <p className="text-sm mt-2">Phân tích một kênh và dữ liệu sẽ được tự động lưu vào đây.</p>
             </div>
           )}
         </div>
