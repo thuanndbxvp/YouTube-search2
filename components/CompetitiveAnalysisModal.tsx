@@ -135,6 +135,7 @@ export const CompetitiveAnalysisModal: React.FC<CompetitiveAnalysisModalProps> =
             typeof s.id === 'string' &&
             typeof s.savedAt === 'string' &&
             s.channelInfo &&
+            typeof s.channelInfo === 'object' && s.channelInfo !== null &&
             typeof s.channelInfo.id === 'string' &&
             typeof s.channelInfo.title === 'string' &&
             typeof s.channelInfo.subscriberCount === 'string' &&

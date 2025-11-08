@@ -132,7 +132,8 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ses
     const validSessions = sessions.filter(s => 
       s && 
       typeof s.id === 'string' &&
-      s.channelInfo && 
+      s.channelInfo &&
+      typeof s.channelInfo === 'object' && s.channelInfo !== null &&
       typeof s.channelInfo.title === 'string' &&
       typeof s.channelInfo.thumbnail === 'string' &&
       typeof s.channelInfo.videoCount === 'string' &&
