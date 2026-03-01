@@ -16,6 +16,7 @@ import { AnalysisTools } from './components/AnalysisTools';
 import { calculateKeywordCounts, getTopKeywords } from './utils/keywords';
 import { ChannelHeader } from './components/ChannelHeader';
 import { CompetitiveAnalysisModal } from './components/CompetitiveAnalysisModal';
+import { PromoPopup } from './components/PromoPopup';
 import { TrashIcon, SpinnerIcon, ClipboardCopyIcon } from './components/Icons';
 import { formatDate, parseISO8601Duration } from './utils/formatters';
 
@@ -770,6 +771,7 @@ Làm thế nào để tôi có thể giúp bạn brainstorm ý tưởng video m�
 
   return (
     <div className="min-h-screen bg-[#1a1b26] text-[#a9b1d6] font-sans">
+      <PromoPopup theme={appConfig.theme} />
       <ApiModal 
         isOpen={isApiModalOpen} 
         onClose={() => setIsApiModalOpen(false)}
